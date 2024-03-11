@@ -125,6 +125,24 @@
           </div>
           <p><a href='javascript:addRow()'>Add Row</a></p>
         </div>
+        
+        <div id="section-management" class="section-container">
+          <h2>Sections</h2>
+          <input type="text" id="section-name-input" placeholder="Enter section name">
+          <button onclick="addSection()">Add Section</button>
+          <table id="sections-table">
+            <thead>
+              <tr>
+                <th>Section Name</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Sections will be added here dynamically -->
+            </tbody>
+          </table>
+        </div>
+        
         <div class='chart-options-container'>
           <h2>Chart Options</h2>
           <div id='chart-options'>
