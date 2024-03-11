@@ -6,7 +6,7 @@ var defaultPalette;
 var userPalette = [];
 var podium = {};
 
-var band;
+var ensemble;
 var jsonVersion = 6;
 
 var centerX = 525*canvasScale
@@ -31,33 +31,6 @@ var vcLoc = [];
 
 $(document).ready(function() {
 	setLetterCheckbox();
-	//for jCanvas 21.0.1
-	/*
-	$.jCanvas.defaults({
-  		strokeStyle: '#000',
-  		strokeWidth: 2 * canvasScale,
-  		x: centerX,
-		y: centerY,
-		inDegrees: false
-	});
-	*/
-	
-	// //for jCanvas5.1
-	// $.jCanvas({
-	// 	strokeStyle: '#000',
-	// 	strokeWidth: 2 * canvasScale ,
-	// 	x: centerX, y: centerY,
-	// 	inDegrees: false
-	// });
-	
-    // Initialize jCanvas with default settings
-    // $.jCanvas.setGlobalProps({
-    //     strokeStyle: '#000',
-    //     strokeWidth: 2 * canvasScale,
-    //     x: centerX,
-    //     y: centerY,
-    //     inDegrees: false
-    // });
 	
     $.extend($.jCanvas.defaults, {
         strokeStyle: '#000',
@@ -66,9 +39,6 @@ $(document).ready(function() {
         y: centerY,
         inDegrees: false
     });
-
-    console.log($.jCanvas)
-
 
 	$('#canvas').attr({
   		'width': $('#canvas').attr('width') * canvasScale,
@@ -96,7 +66,7 @@ $(document).ready(function() {
 	$('#reset').click(reset);
 	$('#guide_canvas').click(clickChart);
 	$('#guide_canvas').dblclick(dblClickChart);
-	$('#chknumbers').change(function() {
+	$('#chknumbers').on('change', function() {
 		setRestartCheckbox();
 		drawChart();
 	});
@@ -217,6 +187,8 @@ $(document).ready(function() {
 
 
 function drawChart() {
+	readInputs();
+	
 	$("canvas").clearCanvas();
 	var showNumbers = $('#chknumbers').attr('checked') != null;
 	var restartNumbering = $('#chkrestart').attr('checked') != null;
@@ -224,13 +196,12 @@ function drawChart() {
 	var totalChairs = 0;
 	var totalStands = 0;
 	var totalStools = 0;
-	if(showNumbers) {
-		var n = 1;
-	} else {
-		var n = '';
-	}
+
+	console.log(showNumbers)
+	let n = showNumbers ? 1 : '';
+
 	var a = '';
-	readInputs();
+
 	updateChairLabels();
 	seatScale = Math.min(1, 7 / rows.length) * customScale;
 	var step = 300 / (rows.length - 1) * canvasScale
@@ -305,6 +276,7 @@ function drawChart() {
 						drawStand(Math.max(r - step * 0.5, r - 35 * customScale), t - angle_step / 2, stands[row][i*2+1]);
 				}
 				if(showNumbers && chairs[row][i].enabled && chairs[row][i].label === false && chairTypes.includes(chairs[row][i].shape)) {
+					console.log("n", n);
 					n++;
 				        totalChairs ++;
 				}
@@ -484,9 +456,11 @@ function drawChair(r, t, n, a, chair) {
 }	
 	
 function drawChairXY(x, y, t, n, a, chair) {
+	console.log("drawChairXY() n:", n)
 	chair.x = x;
 	chair.y = y;
 	var fontSize = (chair.fontSize ? chair.fontSize : 1) * Math.round((a ? 14 : 16) * seatScale);
+	console.log('fontSize:',fontSize)
 	// The black borders don't work in old Firefoxen.
 	// So fake it by drawing two rectangles
 	if(chair.enabled) {
@@ -505,13 +479,17 @@ function drawChairXY(x, y, t, n, a, chair) {
 				width: 40 * seatScale - (4*canvasScale), height: 40 * seatScale - (4*canvasScale),
 				angle: -1 * t
 			});
+			console.log("chair.lable",chair.label);
+			console.log("a+n",a+n);
+			
 			$('canvas').drawText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 5*canvasScale,
+				strokeWidth: 5 * canvasScale + 'pt',
 				x: x, y: y,
 				text: chair.label === false ? a + n : chair.label,
-				font: 'normal ' + fontSize + 'pt Verdana, sans-serif'
+				fontSize: fontSize + 'pt',
+				fontFamily: 'Verdana, sans-serif'
 			});
 		} else if(chair.shape === "circ"){
 			/*
@@ -905,6 +883,7 @@ function dblClickChart(e) {
 
 
 function readInputs() {
+	syncCheckboxEnabledStates()
 	rows = [];
 	for(var i = maxRows - 1; i >= 0; i--) {
 		var val = parseInt($('#row' + (i+1)).val());
@@ -935,6 +914,26 @@ function readInputs() {
 	showStands = $('#chkstands').attr('checked');
 	setStraight(0); // Re-run "max straight rows" logic in case rows were removed
 }
+
+
+function syncCheckboxEnabledStates() {
+    if ($('#chknumbers').attr('checked')) {
+        $('#lblrestart').removeClass('disabled');
+        $('#chkrestart').removeAttr('disabled');
+    } else {
+        $('#lblrestart').addClass('disabled');
+        $('#chkrestart').attr('disabled', 'disabled').removeAttr('checked');
+    }
+    if ($('#chkrestart').attr('checked')) {
+        $('#lblletters').removeClass('disabled');
+        $('#chkletters').removeAttr('disabled');
+    } else {
+        $('#lblletters').addClass('disabled');
+        $('#chkletters').attr('disabled', 'disabled').removeAttr('checked');
+    }
+}
+
+
 
 function editLabels(row) {
 	editingLabelRow = row - 1;
