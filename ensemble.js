@@ -71,7 +71,7 @@ $(document).ready(function() {
 	$('#fileinput').change(loadChartFile);
 	$('#reset').click(reset);
 	$('#guide_canvas').click(clickChart);
-	$('#guide_canvas').dblclick(dblClickChart);
+	$('#guide_canvas').on('dblclick', dblClickChart);
 	$('#chknumbers').on('change', function() {
 		setRestartCheckbox();
 		drawChart();
@@ -898,13 +898,17 @@ function clickChart(e) {
 	var scale = 1050 * canvasScale / canvas.width();
 	var x = (e.pageX - canvas.offset().left) * scale;
 	var y = (e.pageY - canvas.offset().top) * scale;
+	const clickableChairAreaTolerance = 18 * canvasScale 
 	for(var row in rows) {
 		for(var c in chairs[row]) {
 			var chair = chairs[row][c];
-			if(chair.x > x - 18 && chair.x < x + 18 && chair.y > y - 18 && chair.y < y + 18 ) {
+			if(chair.x > x - clickableChairAreaTolerance && chair.x < x + clickableChairAreaTolerance && chair.y > y - clickableChairAreaTolerance && chair.y < y + clickableChairAreaTolerance ) {
 				// Check the current mode to determine action
 				if (currentCanvasClickMode === 'addChairToSection') {
 					// Add chair to section logic
+					chair.section = !chair.section ? currentSection : null;
+
+					//!!! maybe this needs to be drawSections()...
 					addChairToSection(chair, currentSection);
 				} else {
 					chair.enabled = !chair.enabled;
@@ -919,9 +923,11 @@ function clickChart(e) {
 		for(var s in stands[row]) {
 			var stand = stands[row][s];
 			if(stand.x > x - 9 && stand.x < x + 9 && stand.y > y - 9 && stand.y < y + 9 ) {
-				stand.enabled = !stand.enabled;
-				drawChart();
-				break;
+				if (currentCanvasClickMode != 'addChairToSection')  {
+					stand.enabled = !stand.enabled;
+					drawChart();
+					break;
+				}
 			}
 		}
 	}
@@ -1079,7 +1085,7 @@ function reset() {
 	stands = [];
 	standCoordinates = [];
 	rows = [];
-	sections = []
+	sections = {};
 	labels = [];
 	customRowFontSizes = [];
 	customScale = 1 * canvasScale;
@@ -1151,6 +1157,9 @@ function addSection() {
       //alert("Please enter a section name.");
       return;
     }
+	if (sections[sectionName]) {alert("Section with this name already exists."); return;};
+
+	sections[sectionName] = []
     var actionButtons = '<button class="edit-btn">Edit</button> ' +
                         '<button class="add-chairs-btn">Add Chairs</button> ' +
                         '<button class="delete-btn">Delete</button>';
@@ -1160,8 +1169,8 @@ function addSection() {
         <td>${actionButtons}</td>
       </tr>`
     );
-	
-	sections.push([sectionName])
+	//if (!sections[sectionName]) {sections[sectionName] = []}; 
+	console.log('addSections sections', sections)
     $("#section-name-input").val(""); // Clear input box after adding
 }
 
@@ -1171,13 +1180,23 @@ function addChairToSection(chair, section) {
     // Example: Adding the chair to the section in a simple manner
 	console.log("section from addChairToSection", section);
 	console.log(sections[section]);
-	if (!sections[section]) sections[section] = [];
-    sections[section].push(chair);
+
+	//if (!sections[section]) {console.log(hello); sections[section] = [];}
+	const chairExists = sections[section].some(existingChair => existingChair.index === chair.index);
+
+    if (!chairExists) {
+        sections[section].push(chair);
+        chair.section = section; // Assign or reassign the chair's section property.
+    } else {
+        console.log("Chair already exists in this section.");
+    }
+		console.log(sections[section]);
     // You might want to redraw or update the UI to reflect the chair being added to the section
 	console.log("chair from addChairToSection", chair);
 
 	console.log('sections list', sections);
-    drawChart();
+    
+	//drawChart();
 }
 
 
