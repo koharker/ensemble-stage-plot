@@ -515,10 +515,10 @@ function drawPodium() {
 function drawChair(r, t, n, a, chair) {
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
-	drawChairXY(x, y, t, n, a, chair);
+	drawChairXY(x, y, r, t, n, a, chair);
 }
 	
-function drawChairXY(x, y, t, n, a, chair) {
+function drawChairXY(x, y, r, t, n, a, chair) {
 	console.log("drawChairXY() n:", n)
 	chair.x = x;
 	chair.y = y;
