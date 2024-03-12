@@ -27,6 +27,12 @@ var customRowFontSizes;
 var standCoordinates;
 var straightRows = 0;
 var editingLabelRow;
+
+// Global variables to track the current mode and the current section being edited
+var currentCanvasClickMode = 'normal'; // Other possible value: 'addChairToSection'
+var currentSection = null; // Assuming this will hold some identifier for the current section
+var sections;
+
 var vcLoc = [];
 
 $(document).ready(function() {
@@ -119,6 +125,63 @@ $(document).ready(function() {
 	$('#helpcontents').click(function(e) { e.stopPropagation(); });
 	$('#input_labels').hide();
 	
+/** Logic for adding instrument sections to the chart */
+	$("#add-section-btn").on('click', addSection());
+	
+	// Event delegation for dynamically added buttons
+	//SECTION-TABLE EDIT BUTTON	  
+	$("#sections-table").on("click", ".edit-btn", function() {
+		var $td = $(this).closest("tr").find("td:first");
+		var currentName = $td.text();
+		$td.html(`<input type="text" class="edit-name-input" value="${currentName}">`);
+		$(this).siblings().hide(); // Hide other buttons
+		$(this).parent().append('<button class="done-btn">Done</button><button class="cancel-btn">Cancel</button>');
+		$(this).remove(); // Remove edit button
+	});
+
+	$("#sections-table").on("click", ".done-btn", function() {
+	var newName = $(this).siblings(".edit-name-input").val();
+	$(this).closest("tr").find("td:first").text(newName);
+	// Restore buttons here
+	});
+	  
+	$("#sections-table").on("click", ".cancel-btn", function() {
+	// Cancel editing: Restore the original name and buttons
+	});
+	  
+	//SECTIONS-TABLE ADD-CHAIRS BUTTON
+	$("#sections-table").on('click', ".add-chairs-btn", function() {
+		currentCanvasClickMode = 'addChairToSection'
+
+		const $td = $(this).closest("tr").find("td:first");
+		currentSection = $td.text();
+
+		// Define the tr containing the clicked button
+		const currentTr = $(this).closest('tr');
+
+		// Disable all buttons in other tr elements
+		$('#sections-table tr').not(currentTr).find('button').prop('disabled', true);
+		
+		//const $trs = $td.prevUntil(this)
+		//$trs.find('button')
+		
+		//$td.nextUntil().disable(); // Hide other buttons
+
+
+		// Add chairs logic
+	});
+	
+	$("#sections-table").on("click", ".delete-btn", function() {
+		// Delete the section row
+		$(this).closest("tr").remove();
+	});
+
+
+
+
+
+
+
 	if(!window.FileReader) {
 		$('#loadfilecontainer').hide();
 		showCodeInput();
@@ -824,11 +887,17 @@ function clickChart(e) {
 		for(var c in chairs[row]) {
 			var chair = chairs[row][c];
 			if(chair.x > x - 18 && chair.x < x + 18 && chair.y > y - 18 && chair.y < y + 18 ) {
-				chair.enabled = !chair.enabled;
-				drawChart();
-				break;
+				// Check the current mode to determine action
+				if (currentCanvasClickMode === 'addChairToSection') {
+					// Add chair to section logic
+					addChairToSection(chair, currentSection);
+				} else {
+					chair.enabled = !chair.enabled;
+					drawChart();
+					break;
+				}
 			}
-			
+
 		}
 		if(!showStands)
 			continue;
@@ -995,6 +1064,7 @@ function reset() {
 	stands = [];
 	standCoordinates = [];
 	rows = [];
+	sections = []
 	labels = [];
 	customRowFontSizes = [];
 	customScale = 1 * canvasScale;
@@ -1057,6 +1127,44 @@ function setStraight(n) {
 	straightRows = Math.min(rows.length, Math.max(0, straightRows + n));
 	$('#straight').html(straightRows);
 }
+
+
+
+function addSection() {
+	const sectionName = $("#section-name-input").val().trim();
+    if (sectionName === "") {
+      //alert("Please enter a section name.");
+      return;
+    }
+    var actionButtons = '<button class="edit-btn">Edit</button> ' +
+                        '<button class="add-chairs-btn">Add Chairs</button> ' +
+                        '<button class="delete-btn">Delete</button>';
+    $("#sections-table tbody").append(
+      `<tr>
+        <td>${sectionName}</td>
+        <td>${actionButtons}</td>
+      </tr>`
+    );
+	
+	sections.push([sectionName])
+    $("#section-name-input").val(""); // Clear input box after adding
+}
+
+function addChairToSection(chair, section) {
+    // Assuming we have a structure to keep track of sections and their chairs
+    // You need to define how you're storing sections and their related chairs
+    // Example: Adding the chair to the section in a simple manner
+	console.log("section from addChairToSection", section);
+	console.log(sections[section]);
+	if (!sections[section]) sections[section] = [];
+    sections[section].push(chair);
+    // You might want to redraw or update the UI to reflect the chair being added to the section
+	console.log("chair from addChairToSection", chair);
+
+	console.log('sections list', sections);
+    drawChart();
+}
+
 
 function save() {
 	$('#bottommessage').show().html("<span style='color: green;'>Please wait...</span>");
