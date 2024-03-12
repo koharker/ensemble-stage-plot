@@ -516,12 +516,15 @@ function drawChair(r, t, n, a, chair) {
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
 	drawChairXY(x, y, t, n, a, chair);
-}	
+}
 	
 function drawChairXY(x, y, t, n, a, chair) {
 	console.log("drawChairXY() n:", n)
 	chair.x = x;
 	chair.y = y;
+	chair.t  = t;
+	chair.r = r;
+	chair.index = a+n;
 	var fontSize = (chair.fontSize ? chair.fontSize : 1) * Math.round((a ? 14 : 16) * seatScale);
 	console.log('fontSize:',fontSize)
 	// The black borders don't work in old Firefoxen.
@@ -877,6 +880,18 @@ function drawStandXY(x, y, stand) {
 		});
 	}
 }
+
+function drawSection(r, t, n, a, chair) {
+	var x = centerX - Math.sin(t) * r;
+	var y = centerY - Math.cos(t) * r;
+	drawChairXY(x, y, t, n, a, chair);
+}
+
+function drawSectionXY(x, y, chair) {
+
+}
+
+
 
 function clickChart(e) {
 	var canvas = $('#guide_canvas');
