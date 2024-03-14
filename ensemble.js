@@ -32,6 +32,7 @@ var editingLabelRow;
 var currentCanvasClickMode = 'normal'; // Other possible value: 'addChairToSection'
 var currentSection = null; // Assuming this will hold some identifier for the current section
 var sections;
+var selectedChairs = [];
 
 var vcLoc = [];
 
@@ -284,13 +285,17 @@ function drawChart() {
 			console.log(r + "is r");
 		if(row < rows.length - straightRows) {
 			//Angled arc mode
-			/*
-			$('canvas').drawArc({ radius: r, start: - Math.acos((40 + 19 * row)/r), end: Math.acos((40 + 19 * row)/r)});
-			var arc_length = Math.PI/2 + Math.acos(((row))/r) - .3 - (1 - r / (550 + 90 * row));
-			*/
-			$('canvas').drawArc({ radius: r });
-			var arc_length = Math.PI - .3 - (1 - r / (550 *canvasScale))
-			var angle_step = arc_length / (rows[row] - 1)
+		    let arcNarrowingAngle = 30;
+			let arcStartRad = (arcNarrowingAngle - 90) * Math.PI / 180;
+			let arcEndRad = (90 - arcNarrowingAngle) * Math.PI / 180;
+			$('canvas').drawArc({ radius: r, x: centerX, y: centerY, start: arcStartRad, end: arcEndRad });
+			let arcHeightOffset = 40 * canvasScale;
+			let arcSpanAdjustmentRadians = (180 - 2 * arcNarrowingAngle) * Math.PI / 180;
+			let arcHeightOffsettRadians = Math.asin(arcHeightOffset / r) * 2;
+
+			const totalArcAngleRadians = arcSpanAdjustmentRadians - arcHeightOffsettRadians;
+
+			var angle_step = totalArcAngleRadians / (rows[row] - 1)
 			var vcStep = angle_step * 1.5
 			for(var i = 0; i < rows[row]; i++) {
 				var t = 0;
@@ -319,7 +324,7 @@ function drawChart() {
 							};
 						}
 					} else {*/
-						 var t = -1 * (-1 * arc_length / 2 + (angle_step) * i);
+						 var t = -1 * (-1 * totalArcAngleRadians / 2 + (angle_step) * i);
 					/*}*/
 				}
 				// Hide the arc under disabled chairs
@@ -332,7 +337,7 @@ function drawChart() {
 						end: i == rows[row] - 1 ? Math.PI : ((t - angle_step * 0.55) * -1)  // Last chair, blank out entire arc to the right
 					});
 				}
-				drawChair(r, t, n, a, chairs[row][i]);
+				drawChair(r, t, n, a, chairs[row][i], angle_step);
 				if(showStands) {
 					drawStand(Math.max(r - step * 0.5, r - 35 * customScale), t, stands[row][i*2]);
 					if(i != rows[row] - 1)
@@ -512,13 +517,14 @@ function drawPodium() {
 	}
 }
 
-function drawChair(r, t, n, a, chair) {
+function drawChair(r, t, n, a, chair, angleStep) {
+	chair.angleStep = angleStep;
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
 	drawChairXY(x, y, r, t, n, a, chair);
 }
 	
-function drawChairXY(x, y, r, t, n, a, chair) {
+function drawChairXY(x, y, r, t, n, a, chair, angleStep) {
 	console.log("drawChairXY() n:", n)
 	chair.x = x;
 	chair.y = y;
@@ -536,14 +542,14 @@ function drawChairXY(x, y, r, t, n, a, chair) {
 				strokeStyle: '#000',
 				x: x, y: y,
 				width: 40 * seatScale, height: 40 * seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawRect({
 				fillStyle: '#fff',
 				strokeStyle: '#fff',
 				x: x, y: y,
 				width: 40 * seatScale - (4*canvasScale), height: 40 * seatScale - (4*canvasScale),
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			console.log("chair.lable",chair.label);
 			console.log("a+n",a+n);
@@ -881,16 +887,42 @@ function drawStandXY(x, y, stand) {
 	}
 }
 
+
+
 function drawSection(r, t, n, a, chair) {
+	console.log(r)
+	//YOU NEED TO INCLUDE ANGLESTEP IN THE FUNCTION ARGUMENTS
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
-	drawChairXY(x, y, t, n, a, chair);
+	drawSectionXY(x, y, t, n, a, chair);
 }
 
-function drawSectionXY(x, y, chair) {
+function drawSectionXY(x, y, t, n, a, chair) {
+	console.log(chair.t)
+	let sectionBorderWidth = 5;
+	let sectionBorderWidthRads = Math.asin(5 / chair.r) * 2
+	let sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads;
+	// Draw a 90-degree arc
+	$('canvas').drawArc({
+		strokeStyle: '#000',
+		strokeWidth: 5,
+		x: centerX, y: centerY,
+		radius: chair.r + 40 * seatScale,
+		// start and end angles in degrees
+		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
+	});
+	$('canvas').drawArc({
+		strokeStyle: '#000',
+		strokeWidth: 5,
+		x: centerX, y: centerY,
+		radius: chair.r - 40 * seatScale,
+		// start and end angles in degrees
+		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
+	});
 
 }
 
+function calcSectionArcLength() {}
 
 
 function clickChart(e) {
@@ -1187,6 +1219,7 @@ function addChairToSection(chair, section) {
     if (!chairExists) {
         sections[section].push(chair);
         chair.section = section; // Assign or reassign the chair's section property.
+		drawSection(chair.r, chair.t, chair.n, chair.a, chair)
     } else {
         console.log("Chair already exists in this section.");
     }
