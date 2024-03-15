@@ -337,7 +337,7 @@ function drawChart() {
 						end: i == rows[row] - 1 ? Math.PI : ((t - angle_step * 0.55) * -1)  // Last chair, blank out entire arc to the right
 					});
 				}
-				drawChair(r, t, n, a, chairs[row][i], angle_step);
+				drawChair(r, t, n, a, chairs[row][i], angle_step, row, i);
 				if(showStands) {
 					drawStand(Math.max(r - step * 0.5, r - 35 * customScale), t, stands[row][i*2]);
 					if(i != rows[row] - 1)
@@ -388,7 +388,7 @@ function drawChart() {
 						strokeWidth: 5
 					});
 				}
-				drawChairXY(x, y, 0, n, a, chairs[row][i]);
+				drawChairXY(x, y, 0, n, a, chairs[row][i], row, i);
 				if(showStands) {
 					drawStandXY(x, Math.min(y + step * 0.5, y + 35 * customScale), stands[row][i*2]);
 					if(i != rows[row] - 1) {
@@ -517,20 +517,27 @@ function drawPodium() {
 	}
 }
 
-function drawChair(r, t, n, a, chair, angleStep) {
+function drawChair(r, t, n, a, chair, angleStep, row, index) {
 	chair.angleStep = angleStep;
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
-	drawChairXY(x, y, r, t, n, a, chair);
+	drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index);
 }
 	
-function drawChairXY(x, y, r, t, n, a, chair, angleStep) {
+function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index) {
 	console.log("drawChairXY() n:", n)
+	//let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
+	//let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
+	let sectionOffsetRads = chair.angleStep / 2 //- sectionBorderWidthRads;
+
 	chair.x = x;
 	chair.y = y;
 	chair.t  = t;
 	chair.r = r;
-	chair.index = a+n;
+	chair.row = row;
+	chair.index = index;
+	chair.leftBoundTheta = t + sectionOffsetRads;
+	chair.rightBoundTheta = t - sectionOffsetRads;
 	var fontSize = (chair.fontSize ? chair.fontSize : 1) * Math.round((a ? 14 : 16) * seatScale);
 	console.log('fontSize:',fontSize)
 	// The black borders don't work in old Firefoxen.
@@ -899,8 +906,8 @@ function drawSection(r, t, n, a, chair) {
 
 function drawSectionXY(x, y, t, n, a, chair) {
 	console.log(chair.t)
-	let sectionBorderWidth = 5;
-	let sectionBorderWidthRads = Math.asin(5 / chair.r) * 2
+	let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
+	let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
 	let sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads;
 	// Draw a 90-degree arc
 	$('canvas').drawArc({
@@ -919,10 +926,134 @@ function drawSectionXY(x, y, t, n, a, chair) {
 		// start and end angles in degrees
 		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
 	});
+	let borderLeftTheta = t + sectionOffsetRads;
+	let borderRightTheta = t - sectionOffsetRads;
+	var borderLeftX = centerX - Math.sin(t + sectionOffsetRads) * (chair.r - (2* sectionBorderWidthOffset) - 40 * seatScale);
+	var borderLeftY = centerY - Math.cos(t + sectionOffsetRads) * (chair.r - (2* sectionBorderWidthOffset) - 40 * seatScale);
+	var borderRightX = centerX - Math.sin(t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
+	var borderRightY = centerY - Math.cos(t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
 
+	$('canvas').drawVector({
+		strokeStyle: '#000',
+		strokeWidth: 5,
+		x: borderLeftX, y: borderLeftY,
+		// start and end angles in degrees
+		a1: -t - sectionOffsetRads, l1: (80 + (2 * sectionBorderWidthOffset)) * seatScale,
+	});
+	$('canvas').drawVector({
+		strokeStyle: '#000',
+		strokeWidth: 5,
+		x: borderRightX, y: borderRightY,
+		// start and end angles in degrees
+		a1: -t + sectionOffsetRads, l1: (80 + (2 * sectionBorderWidthOffset)) * seatScale,
+	});
 }
 
-function calcSectionArcLength() {}
+function drawSectionBorderLeft(chair) {
+	let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
+	let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
+	let sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads;
+	var borderLeftX = centerX - Math.sin(chair.t + sectionOffsetRads) * (chair.r - (2* sectionBorderWidthOffset) - 40 * seatScale);
+	var borderLeftY = centerY - Math.cos(chair.t + sectionOffsetRads) * (chair.r - (2* sectionBorderWidthOffset) - 40 * seatScale);
+	$('canvas').drawVector({
+		strokeStyle: '#000',
+		strokeWidth: 5,
+		x: borderLeftX, y: borderLeftY,
+		// start and end angles in degrees
+		a1: -t - sectionOffsetRads, l1: (80 + (2 * sectionBorderWidthOffset)) * seatScale,
+	});
+}
+
+function drawSectionBorderTop(chair) {
+	const sectionBorderWidthOffset = 1.25; //for a 5px stroke width
+	const sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
+	const sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads;
+	$('canvas').drawArc({
+		strokeStyle: '#000',
+		strokeWidth: 5,
+		x: centerX, y: centerY,
+		radius: chair.r + 40 * seatScale,
+		// start and end angles in degrees
+		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
+	});
+}
+
+function connectChairsInSection(section) {
+	// This assumes that chairs in row are adjacent.
+
+	const sortedSectionChairs = sortSectionChairs(section)
+	//let sectionStartStopCoordArray = []
+	//find bounds of the section
+	
+
+	/**
+	 * iterate first through rows
+	 * start with back row and compare indicies
+	 * if the sectionChairs[row][i].index == sectionChairs[row][i-1].index -1 then draw a white line instead of a black line for the side
+	 */
+
+	const sectionChairs = organizeSectionChairsIntoArray(section);
+
+	sectionChairs.forEach((sectionRow, rowIndex) => {
+		sectionRow.forEach((sectionChair, chairIndex) => {
+			
+			if (rowIndex == 1 && chairIndex == 1) {
+				drawSectionBorderTop(sectionChair)
+				drawSectionBorderLeft(sectionChair)	
+			}
+			//if the next chair is not adjacent, drawSectionBorderRight;
+			//if there is no next row, then also drawSectionBorderBottom;
+
+			/** 
+			 * Honestly though I thought we could procedurally generate the next border section, but 
+			 * I think we have to do this a different way. If there is a row below, and you don't draw the bottom,
+			 * there might be a gap in the section border if the chair in the row below is not perfectly in line with this chair...
+			 * You might have to use the "draw white line" method
+			 */
+		})
+	})
+	/** compare the t values to determine corners: lets say you've already selected a chair in row 4.
+	 * if the chair.t of the chair you selected in row 3 is less than OR greater than (not equal to) the chair.t in row 4, then you need to draw another top arc.
+	 * if the chair.t of the chair you selected in row 3 = chair.t of chair in row 4, then you draw a white top arc to mask the bottom arc of the selection box of the chair in row 4.
+	 * 
+	 */
+}
+
+function sortSectionChairs(section) {
+	//sort from deepest row & leftmost chair, to shallowest row & rightmost chair. jCanvas arc paths are drawn from left to right.
+  	console.log(section)
+	const sectionSortedByRowThenIndex = section.sort((a, b) => {
+		// First, compare by row descending
+		if (a.row > b.row) return -1;
+		if (a.row < b.row) return 1;
+		// If index is the same, compare by index ascending
+		if (a.index < b.index) return -1;
+		if (a.index > b.index) return 1;
+		return 0;
+	})
+  return sectionSortedByRowThenIndex
+}
+
+function organizeSectionChairsIntoArray(section) {
+    const sortedSectionChairs = sortSectionChairs(section);
+    let rowsMap = {};
+
+    // Group chairs by row
+    sortedSectionChairs.forEach(chair => {
+        if (!rowsMap[chair.row]) {
+            rowsMap[chair.row] = [];
+        }
+        rowsMap[chair.row].push(chair);
+    });
+
+    // Extract arrays from the rowsMap
+    let sectionChairs = Object.values(rowsMap).reverse(); // Reverse to get the rows in descending order
+    return sectionChairs;
+}
+
+//maybe it's easier to compare the multiarray "sections" to "chairs". remove sectionChairs = chairs, but with only those found in "sections"
+
+
 
 
 function clickChart(e) {
@@ -1210,13 +1341,24 @@ function addChairToSection(chair, section) {
     // Assuming we have a structure to keep track of sections and their chairs
     // You need to define how you're storing sections and their related chairs
     // Example: Adding the chair to the section in a simple manner
+	// also, you need to check for adjacency.
 	console.log("section from addChairToSection", section);
 	console.log(sections[section]);
 
-	//if (!sections[section]) {console.log(hello); sections[section] = [];}
-	const chairExists = sections[section].some(existingChair => existingChair.index === chair.index);
+	// 1) check if chair already has a section
+	// 2) check if chair exists in current section
+	// 3) check adjacency
+	// 4) now we can add the chair
+	const chairIsUnassigned = chairSectionIsUnassigned(chair, section)
+	const chairExists = sections[section].some(existingChair => existingChair === chair);
+	const chairIsAdjacent = sectionChairIsAdjacent(chair, section);
 
-    if (!chairExists) {
+
+	console.log('chairIsUnassigned',chairIsUnassigned)
+	console.log('chairExists', chairExists)
+	console.log('chairIsAdjacent',chairIsAdjacent)
+
+    if (chairIsUnassigned && !chairExists && chairIsAdjacent) {
         sections[section].push(chair);
         chair.section = section; // Assign or reassign the chair's section property.
 		drawSection(chair.r, chair.t, chair.n, chair.a, chair)
@@ -1231,6 +1373,50 @@ function addChairToSection(chair, section) {
     
 	//drawChart();
 }
+
+function chairSectionIsUnassigned(chair, section) {
+	if (!!chair.section && chair.section != section) {
+		console.log("This chair belongs to another section.")
+	}
+	return true
+}
+
+function sectionChairIsAdjacent(chair, section) {
+	// If the section is empty, allow adding the chair (or adjust logic as needed)
+	if (sections[section].length === 0) {
+		return true; // Or return false, depending on whether you want to allow adding the first chair without adjacency requirements
+	}
+
+	// Check if the chair is adjacent to any chair in the same row
+	const isInSameRow = sections[section].some(adjacentChair => 
+		adjacentChair.row === chair.row && Math.abs(adjacentChair.index - chair.index) === 1
+	);
+  
+	if (isInSameRow) return true;
+  
+	// Check if the chair is adjacent to any chair in the adjacent rows
+	const isInAdjacentRow = sections[section].some(adjacentChair => {
+		// Check if the adjacentChair is in the row directly above or below the chair
+		const isRowAdjacent = Math.abs(adjacentChair.row - chair.row) === 1;
+		console.log('adjacentChairRow', adjacentChair.row)
+		console.log('chairRow', chair.row)
+
+		console.log(isRowAdjacent)
+
+		// Check spatial adjacency based on bounding boxes
+		console.log('adjacentChairRightTheta', adjacentChair.rightBoundTheta)
+		console.log('adjacentChairLeftTheta', adjacentChair.leftBoundTheta)
+		console.log('chair.rightBoundTheta', chair.rightBoundTheta)
+		console.log('chair.leftBoundTheta', chair.leftBoundTheta)
+		console.log(`chair.leftBoundTheta (${chair.leftBoundTheta}) >= (${adjacentChair.rightBoundTheta}) adjacentChair.rightBoundTheta`, chair.leftBoundTheta >= adjacentChair.rightBoundTheta)
+		const isSpatiallyAdjacent = chair.leftBoundTheta >= adjacentChair.rightBoundTheta && chair.rightBoundTheta <= adjacentChair.leftBoundTheta;
+	
+		return isRowAdjacent && isSpatiallyAdjacent;
+	});
+  
+	return isInAdjacentRow;
+  }
+  
 
 
 function save() {
