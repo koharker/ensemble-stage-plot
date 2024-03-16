@@ -106,7 +106,7 @@ $(document).ready(function() {
 		setStraight(1);
 		drawChart();
 	});
-	$('#chkstands').change(checkStands);
+	$('#chkstands').on('change', checkStands);
 	$('#chkpodium').change(checkPodium);
 	$('#txtlabels').blur(setCustomLabels);
 	$('#txtlabels').keypress(function(e) {
@@ -337,7 +337,7 @@ function drawChart() {
 						end: i == rows[row] - 1 ? Math.PI : ((t - angle_step * 0.55) * -1)  // Last chair, blank out entire arc to the right
 					});
 				}
-				drawChair(r, t, n, a, chairs[row][i], angle_step, row, i);
+				drawChair(r, t, n, a, chairs[row][i], angle_step, row, i, step);
 				if(showStands) {
 					drawStand(Math.max(r - step * 0.5, r - 35 * customScale), t, stands[row][i*2]);
 					if(i != rows[row] - 1)
@@ -517,19 +517,20 @@ function drawPodium() {
 	}
 }
 
-function drawChair(r, t, n, a, chair, angleStep, row, index) {
+function drawChair(r, t, n, a, chair, angleStep, row, index, radiusStep) {
 	chair.angleStep = angleStep;
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
-	drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index);
+	drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep);
 }
 	
-function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index) {
+function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep) {
 	console.log("drawChairXY() n:", n)
 	//let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
 	//let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
 	let sectionOffsetRads = chair.angleStep / 2 //- sectionBorderWidthRads;
-
+	chair.topBoundRadius = r + radiusStep / 2;
+	chair.bottomBoundRadius = r - radiusStep / 2;
 	chair.x = x;
 	chair.y = y;
 	chair.t  = t;
@@ -880,9 +881,12 @@ function drawStandXY(x, y, stand) {
 		x: x, y: y,
 		width: 6*canvasScale, height: 6*canvasScale
 	});
+	console.log('drawStand: stand.enabled', stand.enabled)
 	if(stand.enabled) {
 		$('canvas').each(function() {
 			$(this).drawLine({
+				strokeStyle: '#000',
+				strokeWidth: 4,
 				x1: x-(5*canvasScale), y1: y-(5*canvasScale),
 				x2: x+(5*canvasScale), y2: y+(5*canvasScale)
 			});
@@ -914,7 +918,7 @@ function drawSectionXY(x, y, t, n, a, chair) {
 		strokeStyle: '#000',
 		strokeWidth: 5,
 		x: centerX, y: centerY,
-		radius: chair.r + 40 * seatScale,
+		radius: chair.topBoundRadius, // chair.r + 40 * seatScale,
 		// start and end angles in degrees
 		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
 	});
@@ -1164,13 +1168,14 @@ function readInputs() {
 	}
 	podium = { enabled: true, x: 525, y: 470 };
 	rows.reverse();
-	showStands = $('#chkstands').attr('checked');
+	showStands = $('#chkstands').prop('checked');
+	console.log('showStands',showStands)
 	setStraight(0); // Re-run "max straight rows" logic in case rows were removed
 }
 
 
 function syncCheckboxEnabledStates() {
-    if ($('#chknumbers').attr('checked')) {
+    if ($('#chknumbers').prop('checked')) {
         $('#lblrestart').removeClass('disabled');
         $('#chkrestart').removeAttr('disabled');
     } else {
@@ -1280,7 +1285,7 @@ function setLetterCheckbox() {
 }
 
 function checkStands() {
-	if($('#chkstands').attr('checked')) {
+	if($('#chkstands').prop('checked')) {
 		showStands = true;
 		$('#helpstands').show();
 	} else {
@@ -1387,7 +1392,13 @@ function sectionChairIsAdjacent(chair, section) {
 		return true; // Or return false, depending on whether you want to allow adding the first chair without adjacency requirements
 	}
 
-	// Check if the chair is adjacent to any chair in the same row
+	// Check if chair is the first/only chair to be placed in a new row
+	const isOnlyOneAssignedToRow = !sections[section].some(adjacentChair => 
+		adjacentChair.row === chair.row
+	);
+
+
+    // Check if the chair is adjacent to any chair in the same row
 	const isInSameRow = sections[section].some(adjacentChair => 
 		adjacentChair.row === chair.row && Math.abs(adjacentChair.index - chair.index) === 1
 	);
@@ -1404,17 +1415,19 @@ function sectionChairIsAdjacent(chair, section) {
 		console.log(isRowAdjacent)
 
 		// Check spatial adjacency based on bounding boxes
-		console.log('adjacentChairRightTheta', adjacentChair.rightBoundTheta)
-		console.log('adjacentChairLeftTheta', adjacentChair.leftBoundTheta)
-		console.log('chair.rightBoundTheta', chair.rightBoundTheta)
-		console.log('chair.leftBoundTheta', chair.leftBoundTheta)
-		console.log(`chair.leftBoundTheta (${chair.leftBoundTheta}) >= (${adjacentChair.rightBoundTheta}) adjacentChair.rightBoundTheta`, chair.leftBoundTheta >= adjacentChair.rightBoundTheta)
+		// console.log('adjacentChairRightTheta', adjacentChair.rightBoundTheta)
+		// console.log('adjacentChairLeftTheta', adjacentChair.leftBoundTheta)
+		// console.log('chair.rightBoundTheta', chair.rightBoundTheta)
+		// console.log('chair.leftBoundTheta', chair.leftBoundTheta)
+		// console.log(`chair.leftBoundTheta (${chair.leftBoundTheta}) >= (${adjacentChair.rightBoundTheta}) adjacentChair.rightBoundTheta`, chair.leftBoundTheta >= adjacentChair.rightBoundTheta)
 		const isSpatiallyAdjacent = chair.leftBoundTheta >= adjacentChair.rightBoundTheta && chair.rightBoundTheta <= adjacentChair.leftBoundTheta;
 	
 		return isRowAdjacent && isSpatiallyAdjacent;
 	});
-  
-	return isInAdjacentRow;
+	
+	if (isInAdjacentRow && (isOnlyOneAssignedToRow || isInSameRow))  {
+		return isInAdjacentRow;
+	};
   }
   
 
@@ -1625,7 +1638,6 @@ function decode(code) {
 			if(i / 2 > 7)
 				addRow();
 			var val = matches[1].substring(i, i+2);
-			//console.log(val);
 			loadRows.push(parseInt(val, 10));
 			$('#row' + (i/2+1)).val(val);
 			chairs[i/2] = [];
