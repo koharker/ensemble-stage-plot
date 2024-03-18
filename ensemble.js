@@ -531,6 +531,7 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 	let sectionOffsetRads = chair.angleStep / 2 //- sectionBorderWidthRads;
 	chair.topBoundRadius = r + radiusStep / 2;
 	chair.bottomBoundRadius = r - radiusStep / 2;
+	chair.radiusStep = radiusStep;
 	chair.x = x;
 	chair.y = y;
 	chair.t  = t;
@@ -859,6 +860,11 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 	//console.log(x + ' ' + y + ' ' + t);
 }
 
+function setChairBounds() {};
+
+
+/** DRAW STAND */
+
 function drawStand(r, t, stand) {
 	var x = centerX - Math.sin(t) * r;
 	var y = centerY - Math.cos(t) * r;
@@ -900,15 +906,27 @@ function drawStandXY(x, y, stand) {
 
 
 
-function drawSection(r, t, n, a, chair) {
-	console.log(r)
-	//YOU NEED TO INCLUDE ANGLESTEP IN THE FUNCTION ARGUMENTS
-	var x = centerX - Math.sin(t) * r;
-	var y = centerY - Math.cos(t) * r;
-	drawSectionXY(x, y, t, n, a, chair);
+function drawSections() {
+	sections.forEach(section => {
+		section.forEach(chair => {
+			drawSection(chair)
+		})
+	})
 }
 
-function drawSectionXY(x, y, t, n, a, chair) {
+
+
+function drawSection(section) {
+	$("canvas").clearCanvas();
+	drawChart();
+	//YOU NEED TO INCLUDE ANGLESTEP IN THE FUNCTION ARGUMENTS
+	//var x = centerX - Math.sin(t) * r;
+	//var y = centerY - Math.cos(t) * r;
+	section.forEach(chair => drawSectionXY(chair));
+}
+
+function drawSectionXY(chair) {
+	const t = chair.t;
 	console.log(chair.t)
 	let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
 	let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
@@ -926,23 +944,23 @@ function drawSectionXY(x, y, t, n, a, chair) {
 		strokeStyle: '#000',
 		strokeWidth: 5,
 		x: centerX, y: centerY,
-		radius: chair.r - 40 * seatScale,
+		radius: chair.bottomBoundRadius, //chair.r - 40 * seatScale,
 		// start and end angles in degrees
 		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
 	});
 	let borderLeftTheta = t + sectionOffsetRads;
 	let borderRightTheta = t - sectionOffsetRads;
-	var borderLeftX = centerX - Math.sin(t + sectionOffsetRads) * (chair.r - (2* sectionBorderWidthOffset) - 40 * seatScale);
-	var borderLeftY = centerY - Math.cos(t + sectionOffsetRads) * (chair.r - (2* sectionBorderWidthOffset) - 40 * seatScale);
-	var borderRightX = centerX - Math.sin(t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
-	var borderRightY = centerY - Math.cos(t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
+	var borderLeftX = centerX - Math.sin(chair.t + sectionOffsetRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+	var borderLeftY = centerY - Math.cos(chair.t + sectionOffsetRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+	var borderRightX = centerX - Math.sin(chair.t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
+	var borderRightY = centerY - Math.cos(chair.t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
 
 	$('canvas').drawVector({
 		strokeStyle: '#000',
 		strokeWidth: 5,
 		x: borderLeftX, y: borderLeftY,
 		// start and end angles in degrees
-		a1: -t - sectionOffsetRads, l1: (80 + (2 * sectionBorderWidthOffset)) * seatScale,
+		a1: -t - sectionOffsetRads, l1: (chair.radiusStep + (2 * sectionBorderWidthOffset)),
 	});
 	$('canvas').drawVector({
 		strokeStyle: '#000',
@@ -1106,6 +1124,7 @@ function dblClickChart(e) {
 	var scale = 1050 * canvasScale / canvas.width();
 	var x = (e.pageX - canvas.offset().left) * scale;
 	var y = (e.pageY - canvas.offset().top) * scale;
+	if (currentCanvasClickMode === 'addChairToSection') {return};
 	for(var row in rows) {
 		for(var c in chairs[row]) {
 			var chair = chairs[row][c];
@@ -1342,39 +1361,47 @@ function addSection() {
     $("#section-name-input").val(""); // Clear input box after adding
 }
 
-function addChairToSection(chair, section) {
+function addChairToSection(chair, sectionName) {
     // Assuming we have a structure to keep track of sections and their chairs
     // You need to define how you're storing sections and their related chairs
     // Example: Adding the chair to the section in a simple manner
 	// also, you need to check for adjacency.
-	console.log("section from addChairToSection", section);
-	console.log(sections[section]);
-
+	const section = sections[sectionName];
+	
+	console.log('addChairToSection: ',"section from addChairToSection", section);
+	
 	// 1) check if chair already has a section
 	// 2) check if chair exists in current section
 	// 3) check adjacency
 	// 4) now we can add the chair
-	const chairIsUnassigned = chairSectionIsUnassigned(chair, section)
-	const chairExists = sections[section].some(existingChair => existingChair === chair);
+	const chairIsUnassigned = chairSectionIsUnassigned(chair, sectionName)
+	const chairExists = section.some(existingChair => existingChair === chair);
 	const chairIsAdjacent = sectionChairIsAdjacent(chair, section);
+	const sectionIsEmpty = section.length === 0;
 
 
-	console.log('chairIsUnassigned',chairIsUnassigned)
-	console.log('chairExists', chairExists)
-	console.log('chairIsAdjacent',chairIsAdjacent)
+	console.log('addChairToSection: ','chairIsUnassigned',chairIsUnassigned)
+	console.log('addChairToSection: ','chairExists', chairExists)
+	console.log('addChairToSection: ','chairIsAdjacent',chairIsAdjacent)
 
-    if (chairIsUnassigned && !chairExists && chairIsAdjacent) {
-        sections[section].push(chair);
-        chair.section = section; // Assign or reassign the chair's section property.
-		drawSection(chair.r, chair.t, chair.n, chair.a, chair)
-    } else {
-        console.log("Chair already exists in this section.");
+	//ADD CHAIR LOGIC: if 
+    if (chairIsUnassigned && !chairExists && ( sectionIsEmpty || chairIsAdjacent )) {
+        section.push(chair);
+        chair.section = sectionName; // Assign or reassign the chair's section property.
+		drawSection(section)
+    } 
+	//GET RID OF CHAIR if. it is in the section, and is adjacent 
+	else if (chairExists && ( sectionIsEmpty || chairIsAdjacent )) {
+        const sectionChairIndex = section.indexOf(chair);
+		section.splice(sectionChairIndex, 1);
+		chair.section = null;
+		console.log('addChairToSection: ',"Chair already exists in this section.");
+		drawSection(section);
     }
-		console.log(sections[section]);
     // You might want to redraw or update the UI to reflect the chair being added to the section
-	console.log("chair from addChairToSection", chair);
+	console.log('addChairToSection: ',"chair from addChairToSection", chair);
 
-	console.log('sections list', sections);
+	console.log('addChairToSection: ','sections list', sections);
     
 	//drawChart();
 }
@@ -1386,27 +1413,45 @@ function chairSectionIsUnassigned(chair, section) {
 	return true
 }
 
+
 function sectionChairIsAdjacent(chair, section) {
+	console.log('sectionChairIsAdjacent: ', 'section: ', section)
 	// If the section is empty, allow adding the chair (or adjust logic as needed)
-	if (sections[section].length === 0) {
+	if (section.length === 0) {
 		return true; // Or return false, depending on whether you want to allow adding the first chair without adjacency requirements
 	}
 
+
+	const adjacentSectionRowIsEmpty = isAdjacentSectionRowEmpty(chair, section);
+
+	console.log('adjacentSectionRowIsEmpty:', adjacentSectionRowIsEmpty)
+
 	// Check if chair is the first/only chair to be placed in a new row
-	const isOnlyOneAssignedToRow = !sections[section].some(adjacentChair => 
-		adjacentChair.row === chair.row
-	);
+	const chairIsOnlyChairAssignedToRow = isOnlyChairAssignedToSectionRow(chair, section)
 
+	
+	/*
+	const isOnlyOneAssignedToRow = !section.some(adjacentChair => {
+		adjacentChair.row === chair.row;
+	});
+*/
+	// Check if the chair is next to a chair on its right or left, but not both
+	const chairIsAdjacentToOnlyOneChairFromRow = isAdjacentToOnlyOneChair(chair, section)
 
-    // Check if the chair is adjacent to any chair in the same row
-	const isInSameRow = sections[section].some(adjacentChair => 
+	/*
+	const isAdjacentToOnlyOneChair = sections[section].some(adjacentChair => 
 		adjacentChair.row === chair.row && Math.abs(adjacentChair.index - chair.index) === 1
 	);
-  
-	if (isInSameRow) return true;
+	*/
+
+	console.log('isAdjacentToOnlyOneChair', chairIsAdjacentToOnlyOneChairFromRow);
+	console.log('isOnlyChairAssignedToSectionRow', isOnlyChairAssignedToSectionRow(chair, section))
+	//console.log('isAdjacentToSingleChair', isAdjacentToSingleChair(section,chair));
+
+	if (chairIsAdjacentToOnlyOneChairFromRow) return true;
   
 	// Check if the chair is adjacent to any chair in the adjacent rows
-	const isInAdjacentRow = sections[section].some(adjacentChair => {
+	const isInAdjacentRow = section.some(adjacentChair => {
 		// Check if the adjacentChair is in the row directly above or below the chair
 		const isRowAdjacent = Math.abs(adjacentChair.row - chair.row) === 1;
 		console.log('adjacentChairRow', adjacentChair.row)
@@ -1424,12 +1469,51 @@ function sectionChairIsAdjacent(chair, section) {
 	
 		return isRowAdjacent && isSpatiallyAdjacent;
 	});
-	
-	if (isInAdjacentRow && (isOnlyOneAssignedToRow || isInSameRow))  {
+	console.log('isAdjacent??',isInAdjacentRow, chairIsOnlyChairAssignedToRow, chairIsAdjacentToOnlyOneChairFromRow )
+	if (isInAdjacentRow && (chairIsOnlyChairAssignedToRow || chairIsAdjacentToOnlyOneChairFromRow))  {
 		return isInAdjacentRow;
 	};
-  }
-  
+
+	/**
+	 * THIS SHOULD RETURN TRUE IF:
+	 * chair is the first one,
+	 * chair is to the immediate right or left, but not of a chair in the section
+	 * chair is immediately above or below a chair in the section
+	 * 
+	 * 
+	 */
+}
+
+function isAdjacentSectionRowEmpty(chair, section) {
+	console.log('isAdjacentSectionRowEmpty: ', 'section = ', section)
+	const isAdjacentSectionRowEmpty = section.some(adjacentChair => adjacentChair.row === chair.row);
+	console.log('isAdjacentSectionRowEmpty: ', 'isAdjacentSectionRowEmpty = ',isAdjacentSectionRowEmpty)
+	return isAdjacentSectionRowEmpty === 0;
+}
+
+function isAdjacentToOnlyOneChair(chair, section) {
+	// Count the number of adjacent chairs in the same row
+	const adjacentChairCount = section.filter(adjacentChair => 
+		adjacentChair.row === chair.row && Math.abs(adjacentChair.index - chair.index) === 1
+	).length;
+	
+	// Return true if exactly one chair is adjacent, false otherwise
+	return adjacentChairCount === 1;
+};
+
+// Check if chair is the first/only chair to be placed in a new row
+function isOnlyChairAssignedToSectionRow(chair, section) {
+	console.log('isOnlyChairAssignedToSectionRow: ', 'section: ',section)
+	console.log('isOnlyChairAssignedToSectionRow: ', 'chair: ',chair)
+	const chairsInRowCount = section.filter(adjacentChair => {
+		console.log('isOnlyChairAssignedToSectionRow: ','adjacentChair.row: ',adjacentChair, adjacentChair.row)
+		console.log('isOnlyChairAssignedToSectionRow: ','chair.row: ', chair.row)
+		return adjacentChair.row === chair.row;
+	});
+	console.log('isOnlyChairAssignedToSectionRow: ','chairsInRowCount: ', chairsInRowCount)
+	return chairsInRowCount.length === 0 || chairsInRowCount.length === 1
+};
+
 
 
 function save() {
