@@ -12,7 +12,7 @@ var jsonVersion = 6;
 var centerX = 525*canvasScale
 var centerY = 550*canvasScale
 var seatScale = 1*canvasScale
-var customScale = 1*canvasScale
+var customScale = 1
 var maxRows = 6;
 var generateCode = false;
 var showStands;
@@ -86,7 +86,7 @@ $(document).ready(function() {
 		setCustomScale(-0.1);
 		drawChart();
 	});
-	$('#btnscaleup').click(function() {
+	$('#btnscaleup').on('click', function() {
 		setCustomScale(0.1);
 		drawChart();
 	});
@@ -267,7 +267,7 @@ function drawChart() {
 	var a = '';
 
 	updateChairLabels();
-	seatScale = Math.min(1, 7 / rows.length) * customScale;
+	seatScale = Math.min(1, 7 / rows.length) * customScale * canvasScale;
 	var step = 300 / (rows.length - 1) * canvasScale
 	var row_length = 0;
 	for(var row in rows) {
@@ -327,6 +327,7 @@ function drawChart() {
 						 var t = -1 * (-1 * totalArcAngleRadians / 2 + (angle_step) * i);
 					/*}*/
 				}
+
 				// Hide the arc under disabled chairs
 				if(!chairs[row][i].enabled) {
 					$('canvas').drawArc({
@@ -517,112 +518,98 @@ function drawPodium() {
 	}
 }
 
+
 function drawChair(r, t, n, a, chair, angleStep, row, index, radiusStep) {
-	chair.angleStep = angleStep;
-	var x = centerX - Math.sin(t) * r;
-	var y = centerY - Math.cos(t) * r;
+	const x = centerX - Math.sin(t) * r;
+	const y = centerY - Math.cos(t) * r;
 	drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep);
 }
 	
 function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep) {
 	console.log("drawChairXY() n:", n)
-	//let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
-	//let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
-	let sectionOffsetRads = chair.angleStep / 2 //- sectionBorderWidthRads;
-	chair.topBoundRadius = r + radiusStep / 2;
-	chair.bottomBoundRadius = r - radiusStep / 2;
-	chair.radiusStep = radiusStep;
-	chair.x = x;
-	chair.y = y;
-	chair.t  = t;
-	chair.r = r;
-	chair.row = row;
-	chair.index = index;
-	chair.leftBoundTheta = t + sectionOffsetRads;
-	chair.rightBoundTheta = t - sectionOffsetRads;
+	
+	//THIS SECTIONOFFSET STUFF SHOULD GO WITH drawSection eventually...
+		//let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
+		//let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
+		let sectionOffsetRads = chair.angleStep / 2 //- sectionBorderWidthRads;
+
+	setChairExtendedProperties(chair, x, y, r, t, n, a, row, index, angleStep, radiusStep, sectionOffsetRads)
+
 	var fontSize = (chair.fontSize ? chair.fontSize : 1) * Math.round((a ? 14 : 16) * seatScale);
-	console.log('fontSize:',fontSize)
-	// The black borders don't work in old Firefoxen.
-	// So fake it by drawing two rectangles
+
 	if(chair.enabled) {
-		if(chair.shape === "sqr"){
+		if(chair.shape === "sqr"){		
 			$('canvas').drawRect({
-				fillStyle: '#000',
+				fillStyle: '#fff',
 				strokeStyle: '#000',
+				strokeWidth: 2 * seatScale,
 				x: x, y: y,
 				width: 40 * seatScale, height: 40 * seatScale,
 				rotate: -1 * t
 			});
-			$('canvas').drawRect({
-				fillStyle: '#fff',
-				strokeStyle: '#fff',
-				x: x, y: y,
-				width: 40 * seatScale - (4*canvasScale), height: 40 * seatScale - (4*canvasScale),
-				rotate: -1 * t
-			});
-			console.log("chair.lable",chair.label);
-			console.log("a+n",a+n);
-			
 			$('canvas').drawText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 5 * canvasScale + 'pt',
+				strokeWidth: 3 * seatScale + 'pt',
+				x: x, y: y,
+				text: chair.label === false ? a + n : chair.label,
+				fontSize: fontSize + 'pt',
+				fontFamily: 'Inter, sans-serif'
+			});
+		
+		} else if(chair.shape === "circ"){
+			$('canvas').drawArc({
+				radius: 20 * seatScale,
+				fillStyle: '#fff',
+				strokeStyle: '#000',
+				strokeWidth: 2 * seatScale ,
+				x: x, y: y
+			});
+			$('canvas').drawText({
+				fillStyle: '#000',
+				strokeStyle: '#ffaa99',
+				strokeWidth: 3 * seatScale,
+				x: x, y: y,
+				text: chair.label === false ? a + n : chair.label,
+				fontSize: fontSize + 'pt',
+				fontFamily: 'Inter, sans-serif'
+			});
+			$('canvas').drawText({
+				fillStyle: '#000',
+				strokeStyle: '#ffaa99',
+				strokeWidth: 0,
+				x: x, y: y,
+				text: chair.label === false ? a + n : chair.label,
+				fontSize: fontSize + 'pt',
+				fontFamily: 'Inter, sans-serif'
+			});
+			
+		} else if(chair.shape === "cello") {
+			$('canvas').drawRect({
+				fillStyle: '#fff',
+				strokeStyle: '#000',
+				strokeWidth: 6 * seatScale,
+				x: x, y: y,
+				width: 42 * seatScale, height: 42 * seatScale,
+				angle: -1 * t
+			});
+			// $('canvas').drawRect({
+			// 	fillStyle: '#fff',
+			// 	strokeStyle: '#fff',
+			// 	x: x, y: y,
+			// 	width: 46 * seatScale - (12*canvasScale), height: 46 * seatScale - (12*canvasScale),
+			// 	angle: -1 * t
+			// });
+			$('canvas').drawText({
+				fillStyle: '#000',
+				strokeStyle: '#fff',
+				strokeWidth: 5 * seatScale + 'pt',
 				x: x, y: y,
 				text: chair.label === false ? a + n : chair.label,
 				fontSize: fontSize + 'pt',
 				fontFamily: 'Verdana, sans-serif'
 			});
-		} else if(chair.shape === "circ"){
-			/*
-			var canvas = $('canvas');
-			canvas.drawArc({
-				groups: ['outer', 'inner'],
-				radius: [20 * seatScale, 20 * seatScale - (3*canvasScale)],
-				fillStyle: ['#000', '#fff'],
-				strokeStyle: ['#000', '#fff'],
-				strokeWidth: [5 * canvasScale, 5 * canvasScale],
-				x: x,
-				y: y
-			});
-			canvas.drawText({
-			    fillStyle: '#000',
-			    strokeStyle: '#fff',
-			    strokeWidth: 5 * canvasScale,
-			    x: x,
-			    y: y,
-			    text: chair.label === false ? a + n : chair.label,
-			    font: 'normal ' + fontSize + 'pt Verdana, sans-serif'
-			});
-
-
-			*/
-			
-			
-			
-			$('canvas').drawArc({
-				radius: 20 * seatScale,
-				fillStyle: '#000',
-				strokeStyle: '#000',
-				strokeWidth: 5*canvasScale,
-				x: x, y: y
-			});
-			$('canvas').drawArc({
-				radius: 20 * seatScale - (3*canvasScale),
-				fillStyle: '#fff',
-				strokeStyle: '#fff',
-				strokeWidth: 5*canvasScale,
-				x: x, y: y
-			});
-			$('canvas').drawText({
-				fillStyle: '#000',
-				strokeStyle: '#fff',
-				strokeWidth: 5*canvasScale,
-				x: x, y: y,
-				text: chair.label === false ? a + n : chair.label,
-				font: 'normal ' + fontSize + 'pt Verdana, sans-serif'
-			});
-			
-		} else if(chair.shape === "cello") {
+		} else if(chair.shape === "snare") {
 			$('canvas').drawRect({
 				fillStyle: '#000',
 				strokeStyle: '#000',
@@ -640,19 +627,20 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 			$('canvas').drawText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 5*canvasScale,
+				strokeWidth: 5 * canvasScale,
 				x: x, y: y,
 				text: chair.label === false ? a + n : chair.label,
-				font: 'normal ' + fontSize + 'pt Verdana, sans-serif'
+				fontSize: fontSize + 'pt',
+				fontFamily: 'Verdana, sans-serif'
 			});
-		} else if(chair.shape === "snare") {
+		} else if(chair.shape === "snareOG") {
 			$('canvas').drawEllipse({
 				fillStyle: '#000',
 				strokeStyle: '#000',
 				strokeWidth: 5,
 				width: 38 * seatScale, height: 10 * seatScale,
 				x: x + Math.sin(t) * 9 * seatScale, y: y + Math.cos(t) * 9 * seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawEllipse({
 				fillStyle: '#fff',
@@ -660,21 +648,21 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				strokeWidth: 5,
 				width: 38 * seatScale - 4, height: 10 * seatScale - 4 ,
 				x: x + Math.sin(t) * 9 * seatScale, y: y + Math.cos(t) * 9 * seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawRect({
 				fillStyle: '#000',
 				strokeStyle: '#000',
 				x: x, y: y,
 				width: 40 * seatScale, height: 16 * seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawRect({
 				fillStyle: '#fff',
 				strokeStyle: '#fff',
 				x: x, y: y,
 				width: 40 * seatScale - 4, height: 16 * seatScale +seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawEllipse({
 				fillStyle: '#000',
@@ -682,7 +670,7 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				strokeWidth: 5,
 				width: 38 * seatScale, height: 10 * seatScale,
 				x: x - Math.sin(t) * 8 * seatScale, y: y - Math.cos(t) * 8 * seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawEllipse({
 				fillStyle: '#fff',
@@ -690,15 +678,16 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				strokeWidth: 5,
 				width: 38 * seatScale - 4, height: 10 * seatScale - 4 ,
 				x: x - Math.sin(t) * 8 * seatScale, y: y - Math.cos(t) * 8 * seatScale,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 			$('canvas').drawText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 5,
+				strokeWidth: 5 * seatScale + 'pt',
 				x: x, y: y,
 				text: chair.label === false ? "SD" : chair.label,
-				font: 'normal ' + fontSize + 'pt Verdana, sans-serif'
+				fontSize: fontSize + 'pt',
+				fontFamily: 'Verdana, sans-serif'
 			});
 		} else if(chair.shape === "bass_drum") {
 			$('canvas').drawEllipse({
@@ -860,8 +849,27 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 	//console.log(x + ' ' + y + ' ' + t);
 }
 
-function setChairBounds() {};
+function setChairExtendedProperties(chair, x, y, r, t, n, a, row, index, angleStep, radiusStep, sectionOffsetRads) {
+	chair.angleStep = angleStep;
+	chair.topBoundRadius = r + radiusStep / 2;
+	chair.bottomBoundRadius = r - radiusStep / 2;
+	chair.radiusStep = radiusStep;
+	chair.x = x;
+	chair.y = y;
+	chair.t  = t;
+	chair.r = r;
+	chair.row = row;
+	chair.index = index;
+	chair.leftBoundTheta = t + sectionOffsetRads;
+	chair.rightBoundTheta = t - sectionOffsetRads;
+	chair.n = n;
+	chair.a = a;
+}
 
+function setChairBounds() {};
+function drawSqrChair(chair) {
+	
+}
 
 /** DRAW STAND */
 
@@ -1275,7 +1283,7 @@ function reset() {
 	sections = {};
 	labels = [];
 	customRowFontSizes = [];
-	customScale = 1 * canvasScale;
+	customScale = 1;
 	straightRows = 0;
 	$('#scale').html('100');
 	$('#straight').html('0');
