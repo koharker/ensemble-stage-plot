@@ -536,6 +536,8 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 	setChairExtendedProperties(chair, x, y, r, t, n, a, row, index, angleStep, radiusStep, sectionOffsetRads)
 
 	var fontSize = (chair.fontSize ? chair.fontSize : 1) * Math.round((a ? 14 : 16) * seatScale);
+	
+	// maybe we want chair.draw()? ?
 
 	if(chair.enabled) {
 		if(chair.shape === "sqr"){		
@@ -547,16 +549,15 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				width: 40 * seatScale, height: 40 * seatScale,
 				rotate: -1 * t
 			});
-			$('canvas').drawText({
+			$('canvas').drawChairText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 3 * seatScale + 'pt',
+				strokeWidth: 5 * seatScale,
 				x: x, y: y,
 				text: chair.label === false ? a + n : chair.label,
 				fontSize: fontSize + 'pt',
 				fontFamily: 'Inter, sans-serif'
 			});
-		
 		} else if(chair.shape === "circ"){
 			$('canvas').drawArc({
 				radius: 20 * seatScale,
@@ -565,25 +566,15 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				strokeWidth: 2 * seatScale ,
 				x: x, y: y
 			});
-			$('canvas').drawText({
+			$('canvas').drawChairText({
 				fillStyle: '#000',
-				strokeStyle: '#ffaa99',
-				strokeWidth: 3 * seatScale,
+				strokeStyle: '#fff',
+				strokeWidth: 5 * seatScale,
 				x: x, y: y,
 				text: chair.label === false ? a + n : chair.label,
 				fontSize: fontSize + 'pt',
 				fontFamily: 'Inter, sans-serif'
 			});
-			$('canvas').drawText({
-				fillStyle: '#000',
-				strokeStyle: '#ffaa99',
-				strokeWidth: 0,
-				x: x, y: y,
-				text: chair.label === false ? a + n : chair.label,
-				fontSize: fontSize + 'pt',
-				fontFamily: 'Inter, sans-serif'
-			});
-			
 		} else if(chair.shape === "cello") {
 			$('canvas').drawRect({
 				fillStyle: '#fff',
@@ -593,60 +584,21 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				width: 42 * seatScale, height: 42 * seatScale,
 				angle: -1 * t
 			});
-			// $('canvas').drawRect({
-			// 	fillStyle: '#fff',
-			// 	strokeStyle: '#fff',
-			// 	x: x, y: y,
-			// 	width: 46 * seatScale - (12*canvasScale), height: 46 * seatScale - (12*canvasScale),
-			// 	angle: -1 * t
-			// });
-			$('canvas').drawText({
+			$('canvas').drawChairText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 5 * seatScale + 'pt',
+				strokeWidth: 5 * seatScale,
 				x: x, y: y,
 				text: chair.label === false ? a + n : chair.label,
 				fontSize: fontSize + 'pt',
-				fontFamily: 'Verdana, sans-serif'
+				fontFamily: 'Inter, sans-serif'
 			});
 		} else if(chair.shape === "snare") {
-			$('canvas').drawRect({
-				fillStyle: '#000',
-				strokeStyle: '#000',
-				x: x, y: y,
-				width: 46 * seatScale, height: 46 * seatScale,
-				angle: -1 * t
-			});
-			$('canvas').drawRect({
-				fillStyle: '#fff',
-				strokeStyle: '#fff',
-				x: x, y: y,
-				width: 46 * seatScale - (12*canvasScale), height: 46 * seatScale - (12*canvasScale),
-				angle: -1 * t
-			});
-			$('canvas').drawText({
-				fillStyle: '#000',
-				strokeStyle: '#fff',
-				strokeWidth: 5 * canvasScale,
-				x: x, y: y,
-				text: chair.label === false ? a + n : chair.label,
-				fontSize: fontSize + 'pt',
-				fontFamily: 'Verdana, sans-serif'
-			});
-		} else if(chair.shape === "snareOG") {
-			$('canvas').drawEllipse({
-				fillStyle: '#000',
-				strokeStyle: '#000',
-				strokeWidth: 5,
-				width: 38 * seatScale, height: 10 * seatScale,
-				x: x + Math.sin(t) * 9 * seatScale, y: y + Math.cos(t) * 9 * seatScale,
-				rotate: -1 * t
-			});
 			$('canvas').drawEllipse({
 				fillStyle: '#fff',
-				strokeStyle: '#fff',
-				strokeWidth: 5,
-				width: 38 * seatScale - 4, height: 10 * seatScale - 4 ,
+				strokeStyle: '#000',
+				strokeWidth: 2 * seatScale,
+				width: 40 * seatScale, height: 10 * seatScale,
 				x: x + Math.sin(t) * 9 * seatScale, y: y + Math.cos(t) * 9 * seatScale,
 				rotate: -1 * t
 			});
@@ -661,33 +613,25 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 				fillStyle: '#fff',
 				strokeStyle: '#fff',
 				x: x, y: y,
-				width: 40 * seatScale - 4, height: 16 * seatScale +seatScale,
-				rotate: -1 * t
-			});
-			$('canvas').drawEllipse({
-				fillStyle: '#000',
-				strokeStyle: '#000',
-				strokeWidth: 5,
-				width: 38 * seatScale, height: 10 * seatScale,
-				x: x - Math.sin(t) * 8 * seatScale, y: y - Math.cos(t) * 8 * seatScale,
+				width: 40 * seatScale - 4, height: 16 * seatScale + seatScale,
 				rotate: -1 * t
 			});
 			$('canvas').drawEllipse({
 				fillStyle: '#fff',
-				strokeStyle: '#fff',
-				strokeWidth: 5,
-				width: 38 * seatScale - 4, height: 10 * seatScale - 4 ,
-				x: x - Math.sin(t) * 8 * seatScale, y: y - Math.cos(t) * 8 * seatScale,
+				strokeStyle: '#000',
+				strokeWidth: 2 * seatScale,
+				width: 40 * seatScale, height: 10 * seatScale,
+				x: x - Math.sin(t) * 10 * seatScale, y: y - Math.cos(t) * 10 * seatScale,
 				rotate: -1 * t
 			});
-			$('canvas').drawText({
+			$('canvas').drawChairText({
 				fillStyle: '#000',
 				strokeStyle: '#fff',
-				strokeWidth: 5 * seatScale + 'pt',
+				strokeWidth: 5 * seatScale,
 				x: x, y: y,
 				text: chair.label === false ? "SD" : chair.label,
 				fontSize: fontSize + 'pt',
-				fontFamily: 'Verdana, sans-serif'
+				fontFamily: 'Inter, sans-serif'
 			});
 		} else if(chair.shape === "bass_drum") {
 			$('canvas').drawEllipse({
@@ -753,19 +697,13 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 		}
 	} else {
 		if(chair.shape === "sqr"){
-			$('#guide_canvas').drawRect({
-				fillStyle: '#CCC',
+			$('canvas').drawRect({
+				fillStyle: '#fff',
 				strokeStyle: '#CCC',
+				strokeWidth: 2 * seatScale,
 				x: x, y: y,
 				width: 40 * seatScale, height: 40 * seatScale,
-				angle: -1 * t
-			});
-			$('#guide_canvas').drawRect({
-				fillStyle: '#fff',
-				strokeStyle: '#fff',
-				x: x, y: y,
-				width: 40 * seatScale - 4, height: 40 * seatScale - 4,
-				angle: -1 * t
+				rotate: -1 * t
 			});
 		} else if (chair.shape === "circ") {
 			$('#guide_canvas').drawArc({
@@ -1833,4 +1771,31 @@ function showHelp(highlight) {
 function closeHelp() {
 	$('#help').hide();
 	$('#helpstyle *').css('background-color', '');
+}
+
+
+
+
+
+
+// Draws chair Text on canvas
+$.fn.drawChairText = function drawChairText(args) {
+	$('canvas').drawText({
+		fillStyle: args.strokeStyle,
+		strokeStyle: args.strokeStyle,
+		strokeWidth: args.strokeWidth,
+		x: args.x, y: args.y,
+		text: args.text,
+		fontSize: args.fontSize,
+		fontFamily: args.fontFamily
+	});
+	$('canvas').drawText({
+		fillStyle: args.fillStyle,
+		strokeStyle: args.fillStyle,
+		strokeWidth: 0,
+		x: args.x, y: args.y,
+		text: args.text,
+		fontSize: args.fontSize,
+		fontFamily: args.fontFamily
+	});
 }
