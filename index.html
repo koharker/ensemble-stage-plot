@@ -6,7 +6,7 @@
     <!-- <script type="text/javascript" src="jquery.min.map"></script>-->
     <script type="text/javascript"  src="jcanvas.min.js"></script>
     <!-- <script src="jcanvas.min.js.map"></script>-->
-    <script type="text/javascript" src="ensemble.js"></script>
+    <script type="module" src="ensemble.js"></script>
     <script type="text/javascript" src="sections.js"></script>
     <link rel="stylesheet" type="text/css" href="ensemble.css">
     <title>Band/Orchestra Seating Chart</title>
@@ -130,7 +130,7 @@
         <div id="section-management" class="section-container">
           <h2>Sections</h2>
           <input type="text" id="section-name-input" placeholder="Enter section name">
-          <button onclick="addSection()">Add Section</button>
+          <button id="add-section-btn">Add Section</button>
           <table id="sections-table">
             <thead>
               <tr>

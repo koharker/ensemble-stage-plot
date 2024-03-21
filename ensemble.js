@@ -59,7 +59,7 @@ $(function() {
 	});
 
 
-	$('input').on('change', drawChart());
+	$('input').on('change', drawChart);
 	$('#code').off('change');
 	$('input').on('keyup', drawChart);
 	$('#generate').click(drawChart);
