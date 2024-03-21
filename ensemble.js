@@ -1338,7 +1338,9 @@ function addChairToSection(chair, section) {
 	const sectionIsEmpty = section.isEmpty()
 	  
 	const chairIsAdjacent = sectionChairIsAdjacent(chair, section);
+	const chairIsOnlyChairAssignedToRow = isOnlyChairAssignedToSectionRow(chair, section)
 
+	const chairDisruptsVerticalContinuityOnRemoval = !sectionIsEmpty && !chairIsOnlyChairAssignedToRow ? disruptsVerticalContinuityOnRemoval(chair, section) : false;
 
 	//const chairExists = section.some(existingChair => existingChair === chair); //Where 'section' is an Array
 	//const sectionIsEmpty = section.length === 0; //Where 'section' is an Array
@@ -1356,7 +1358,9 @@ function addChairToSection(chair, section) {
 		drawSection(section)
     }
 	//GET RID OF CHAIR if. it is in the section, and is adjacent 
-	else if (chairAlreadyExistsInSection && ( sectionIsEmpty || chairIsAdjacent )) {
+	else if (chairAlreadyExistsInSection && ( sectionIsEmpty || chairIsAdjacent ) && !chairDisruptsVerticalContinuityOnRemoval) {
+		disruptsVerticalContinuityOnRemoval(chair, section);
+		console.log("ajo;ishjgpfoihwIHPOGAIW disruptsVerticalContinuityOnRemoval(chair, section);", chairDisruptsVerticalContinuityOnRemoval)
         //const sectionChairIndex = section.indexOf(chair);
 		//section.splice(sectionChairIndex, 1);
 		section.removeChair(chair)
@@ -1652,6 +1656,116 @@ function sectionChairBridgesGap(chair, section) {
 
 function isBetweenTwoChairsAboveAndBelow(chair, section) {}
 function isLastChairBetweenTwoRows(chair, section) { }
+
+function isLastChairConnectingTwoRows(chair, section) {
+
+}
+
+
+
+/**
+ * Checks if the specified chair's removal would disrupt vertical continuity between its row
+ * and adjacent rows. A chair is considered critical for vertical continuity if it's the only chair
+ * in its row that is within specific theta bounds of chairs in the adjacent rows above or below,
+ * indicating a vertical spatial connection.
+ *
+ * @param {Object} chair - The chair to assess for vertical continuity impact. Expected to have
+ *                         properties indicating its row and theta bounds.
+ * @param {Section} section - The section from which the chair might be removed. Expected to have
+ *                            a `rows` property, mapping row numbers to arrays of chair objects,
+ *                            each with theta bounds.
+ * @returns {boolean} Returns `true` if removing the chair disrupts vertical continuity with
+ *                    adjacent rows, false otherwise.
+ */
+function disruptsVerticalContinuityOnRemoval(chair, section) {
+    // Adjacent rows to consider
+    const aboveRow = section.rows[+chair.row + 1] || [];
+	const currentRow = section.rows[chair.row];
+    const belowRow = section.rows[+chair.row - 1] || [];
+
+	const aboveRowThetaBounds = findRowThetaBounds(aboveRow);
+	const currentRowThetaBounds = findRowThetaBounds(currentRow);
+	const belowRowThetaBounds = findRowThetaBounds(belowRow);
+
+	console.log('checkVerticalConnectivity: ', 'aboveRowThetaBounds = ', aboveRowThetaBounds)
+
+
+    // Function to determine if a chair in the current row has a vertical connection
+    // to any chair in a specified adjacent row.
+    const hasVerticalConnection = (currentRowThetaBounds, adjacentRowThetaBounds) => {
+		// Check if the adjacent row exists
+		if (adjacentRowThetaBounds.maxLeftTheta === null || adjacentRowThetaBounds.minRightTheta === null) {
+			return false; // No vertical connection if the adjacent row does not exist
+		}
+		return currentRowThetaBounds.maxLeftTheta >= adjacentRowThetaBounds.minRightTheta &&
+			   currentRowThetaBounds.minRightTheta <= adjacentRowThetaBounds.maxLeftTheta;
+    };
+
+    // Check for vertical connections before removing the chair
+    const isConnectedAbove = hasVerticalConnection(currentRowThetaBounds, aboveRowThetaBounds);
+    const isConnectedBelow = hasVerticalConnection(currentRowThetaBounds, belowRowThetaBounds);
+
+    // Remove the chair temporarily to see if vertical continuity is broken
+    const tempRow = currentRow.filter(c => c !== chair);
+	const tempRowThetaBounds = findRowThetaBounds(tempRow) || {maxLeftTheta: 0, minRightTheta: 0}
+
+    const isConnectedAboveAfterRemoval = hasVerticalConnection(tempRowThetaBounds, aboveRowThetaBounds);
+    const isConnectedBelowAfterRemoval = hasVerticalConnection(tempRowThetaBounds, belowRowThetaBounds);
+
+	console.log('checkVerticalConnectivity: ', 'isConnectedAbove && !isConnectedAboveAfterRemoval', isConnectedAbove ,'&&', !isConnectedAboveAfterRemoval)
+	console.log('checkVerticalConnectivity: ', 'isConnectedAbove && !isConnectedAboveAfterRemoval', isConnectedAbove && !isConnectedAboveAfterRemoval)
+
+
+	/** if the last remaining chair is in the top row and it is connected below, 
+	 * or if the last remaining chair is in the bottom row, and it is connected above, 
+	 * then it does NOT disruptVerticalConnection.
+	 */
+	if (isLastRemainingChairAssignedToRow(chair, section) && ((!isConnectedAbove && isConnectedBelow) || (!isConnectedBelow && isConnectedAbove))) {return false}
+
+    // Assess the impact of chair removal on vertical continuity
+    return (isConnectedAbove && !isConnectedAboveAfterRemoval) || (isConnectedBelow && !isConnectedBelowAfterRemoval);
+}
+
+
+
+
+/**
+ * Finds the maximum leftBoundTheta and minimum rightBoundTheta for all chairs in a given row.
+ * This helps determine the critical bounds for assessing continuity and adjacency within the row.
+ *
+ * @param {Object[]} chairsInRow - An array of chair objects within a specific row. Each chair object
+ *                                 is expected to have `leftBoundTheta` and `rightBoundTheta` properties.
+ * @returns {{maxLeftTheta: number, minRightTheta: number}} An object containing the maximum leftBoundTheta
+ *                                                          and minimum rightBoundTheta found among all chairs
+ *                                                          in the row.
+ */
+function findRowThetaBounds(chairsInRow) {
+    if (chairsInRow.length === 0) {
+        // Return a default or indicative value when there are no chairs in the row
+        return { maxLeftTheta: null, minRightTheta: null };
+    }
+
+    // Initialize max and min with the first chair's theta values
+    let maxLeftTheta = chairsInRow[0].leftBoundTheta;
+    let minRightTheta = chairsInRow[0].rightBoundTheta;
+
+    // Iterate over each chair to find the max left theta and min right theta bounds
+    chairsInRow.forEach(chair => {
+        if (chair.leftBoundTheta > maxLeftTheta) {
+            maxLeftTheta = chair.leftBoundTheta;
+        }
+        if (chair.rightBoundTheta < minRightTheta) {
+            minRightTheta = chair.rightBoundTheta;
+        }
+    });
+
+    return { maxLeftTheta, minRightTheta };
+}
+
+
+
+
+
 
 ///////////////////////////////////////////////////////////////////
 
