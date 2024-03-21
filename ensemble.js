@@ -1,3 +1,4 @@
+import { Section } from './sections.js'; // Import Chair class if needed inside Section class
 
 var canvasScale = 2;
 var spectrumInitialized = false;
@@ -790,8 +791,8 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 
 function setChairExtendedProperties(chair, x, y, r, t, n, a, row, index, angleStep, radiusStep, sectionOffsetRads) {
 	chair.angleStep = angleStep;
-	chair.topBoundRadius = r + radiusStep / 2;
-	chair.bottomBoundRadius = r - radiusStep / 2;
+	chair.topBoundRadius = row == rows.length - 1 ? r + 55 * canvasScale : r + radiusStep / 2; //radiusStep/2 unless it's the top row, then 55
+	chair.bottomBoundRadius = row == 0 ? r - 55 * canvasScale : r - radiusStep / 2; //radiusStep/2 unless it's the bottom row, then 55
 	chair.radiusStep = radiusStep;
 	chair.x = x;
 	chair.y = y;
@@ -803,6 +804,9 @@ function setChairExtendedProperties(chair, x, y, r, t, n, a, row, index, angleSt
 	chair.rightBoundTheta = t - sectionOffsetRads;
 	chair.n = n;
 	chair.a = a;
+	console.log('setChairExtendedProperties: ', 'chair.row', row)
+	console.log('setChairExtendedProperties: ', 'rows.length', rows.length - 1)
+	console.log('setChairExtendedProperties: ', 'chair.topBoundRadius', chair.topBoundRadius)
 }
 
 function setChairBounds() {};
@@ -1721,6 +1725,9 @@ function disruptsVerticalContinuityOnRemoval(chair, section) {
 	 * then it does NOT disruptVerticalConnection.
 	 */
 	if (isLastRemainingChairAssignedToRow(chair, section) && ((!isConnectedAbove && isConnectedBelow) || (!isConnectedBelow && isConnectedAbove))) {return false}
+
+	// if it's the last remaining and it is connected above AND below, then it DOES disruptVerticalConnection
+	if (isLastRemainingChairAssignedToRow(chair, section) && isConnectedAbove && isConnectedBelow) {return true}
 
     // Assess the impact of chair removal on vertical continuity
     return (isConnectedAbove && !isConnectedAboveAfterRemoval) || (isConnectedBelow && !isConnectedBelowAfterRemoval);

@@ -1,6 +1,6 @@
 //import { Chair } from './chair.js'; // Import Chair class if needed inside Section class
 
-class Section {
+export class Section {
     constructor(name) {
         this.name = name;
         this.rows = {}; // Dynamically holds row data
