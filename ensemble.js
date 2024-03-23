@@ -342,9 +342,9 @@ function drawChart() {
 				}
 				drawChair(r, t, n, a, chairs[row][i], angle_step, row, i, step);
 				if(showStands) {
-					drawStand(Math.max(r - step * 0.5, r - 35 * customScale), t, stands[row][i*2]);
+					drawStand(Math.max(r - step * 0.5, r - 35 * canvasScale * customScale), t, stands[row][i*2]);
 					if(i != rows[row] - 1)
-						drawStand(Math.max(r - step * 0.5, r - 35 * customScale), t - angle_step / 2, stands[row][i*2+1]);
+						drawStand(Math.max(r - step * 0.5, r - 35 * canvasScale * customScale), t - angle_step / 2, stands[row][i*2+1]);
 				}
 				if(showNumbers && chairs[row][i].enabled && chairs[row][i].label === false && chairTypes.includes(chairs[row][i].shape)) {
 					console.log("n", n);
@@ -791,7 +791,7 @@ function drawChairXY(x, y, r, t, n, a, chair, angleStep, row, index, radiusStep)
 
 function setChairExtendedProperties(chair, x, y, r, t, n, a, row, index, angleStep, radiusStep, sectionOffsetRads) {
 	chair.angleStep = angleStep;
-	chair.topBoundRadius = row == rows.length - 1 ? r + 55 * canvasScale : r + radiusStep / 2; //radiusStep/2 unless it's the top row, then 55
+	chair.topBoundRadius = (row == rows.length - 1 || rows.length == 1) ? r + 55 * canvasScale : r + radiusStep / 2; //radiusStep/2 unless it's the top row or only row, then 55
 	chair.bottomBoundRadius = row == 0 ? r - 55 * canvasScale : r - radiusStep / 2; //radiusStep/2 unless it's the bottom row, then 55
 	chair.radiusStep = radiusStep;
 	chair.x = x;
@@ -880,10 +880,332 @@ function drawSection(section) {
     
     // Iterate over each row in the section
     Object.values(section.rows).forEach(row => {
+		drawSectionByRow(row, section)
         // For each row, iterate over each chair and draw it
-        row.forEach(chair => drawSectionXY(chair));
+        //row.forEach(chair => drawSectionXY(chair));
     });
 }
+
+
+function drawSectionByRow(row, section) {
+	drawSectionRowSides(row, section);
+	//drawSectionRowBottom(row, section);
+	drawSectionRowTopAndBottom(row, section)
+	//drawSectionRowTop();
+}
+
+
+function drawSectionRowSides(row, section) {
+	//We don't know the length of the section edges, so pull a sample chair to find other variables we need.
+	const chair = row[0];
+
+	const thetaBounds = findRowThetaBounds(row);
+
+
+	let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
+	let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
+	let sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads; //rads for if you want side borders to be drawn INSIDE the section bounds
+	const sideBorderVectorLength = chair.topBoundRadius - chair.bottomBoundRadius + (4 * sectionBorderWidthOffset)
+
+	var borderLeftX = centerX - Math.sin(thetaBounds.maxLeftTheta - sectionBorderWidthRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+	var borderLeftY = centerY - Math.cos(thetaBounds.maxLeftTheta - sectionBorderWidthRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+	var borderRightX = centerX - Math.sin(thetaBounds.minRightTheta - sectionBorderWidthRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+	var borderRightY = centerY - Math.cos(thetaBounds.minRightTheta - sectionBorderWidthRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+
+	/*// use this if you want the section edge to be drawn right down the middle between two chairs.
+	$('canvas').drawVector({
+		strokeStyle: '#0A0',
+		strokeWidth: 12,
+		x: centerX - Math.sin(-leftBorderRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset)), y: centerY - Math.cos(-leftBorderRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset)),
+		// start and end angles in degrees
+		a1: leftBorderRads, l1: sideBorderVectorLength //(chair.radiusStep + (2 * sectionBorderWidthOffset)),
+	});*/
+
+	// use this if you want the section edge to be drawn on the inside edge of the border between 2 chairs.
+	$('canvas').drawVector({
+		strokeStyle: '#00A',
+		strokeWidth: 10,
+		x: borderLeftX, y: borderLeftY,
+		// start and end angles in degrees
+		a1: -thetaBounds.maxLeftTheta, l1: sideBorderVectorLength //(chair.radiusStep + (2 * sectionBorderWidthOffset)),
+	});
+	$('canvas').drawVector({
+		strokeStyle: '#00A',
+		strokeWidth: 10,
+		x: borderRightX, y: borderRightY,
+		// start and end angles in degrees
+		a1: -thetaBounds.minRightTheta, l1: sideBorderVectorLength,
+	});
+
+}
+
+
+function drawSectionRowBottom(row, section) {
+	//Pull a sample chair to find other variables we need.
+	const chair = row[0];
+	// Adjust the row numbers to match the bottom-to-top drawing order
+	const aboveRowNumber = +chair.row + 1;
+	const belowRowNumber = +chair.row - 1;
+	
+	// Check if these rows are empty or do not exist
+	const isAboveRowEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber].length === 0;
+	const belowRowIsEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber].length === 0;
+	
+
+	const aboveRow = section.rows[+chair.row + 1] || [];
+	const currentRow = section.rows[+chair.row];
+	const belowRow = section.rows[+chair.row - 1] || [];
+
+	const aboveRowThetaBounds = findRowThetaBounds(aboveRow);
+	const currentRowThetaBounds = findRowThetaBounds(currentRow);
+	const belowRowThetaBounds = findRowThetaBounds(belowRow);
+
+	const segments = [];
+	
+	const segment = {
+		startTheta: currentRowThetaBounds.maxLeftTheta,
+		stopTheta: currentRowThetaBounds.minRightTheta
+	}
+
+	console.log('drawSectionRowBottom: ', 'row = ', row);
+	console.log('drawSectionRowBottom: ', 'section = ', section)
+	console.log('drawSectionRowBottom: ', 'chair = ', chair);
+	console.log('drawSectionRowBottom: ', 'belowRow = ', belowRow);
+	console.log('drawSectionRowBottom: ', 'belowRowThetaBounds = ', belowRowThetaBounds);
+	console.log('drawSectionRowBottom: ', 'currentRowThetaBounds = ', currentRowThetaBounds);
+	console.log('drawSectionRowBottom: ', 'segment = ', segment);
+
+
+
+
+	if (!belowRowIsEmpty) {
+		// If connected chairs below overlap the left side of chair, then draw bottom border on the right side
+		if (belowRowThetaBounds.maxLeftTheta >= currentRowThetaBounds.maxLeftTheta && belowRowThetaBounds.minRightTheta < currentRowThetaBounds.maxLeftTheta && belowRowThetaBounds.minRightTheta > currentRowThetaBounds.minRightTheta) {
+			segment.startTheta = belowRowThetaBounds.minRightTheta;
+		};
+
+		// If connected chairs below overlap the right side of chair, then draw bottom border on the left side
+		if (belowRowThetaBounds.maxLeftTheta > currentRowThetaBounds.minRightTheta && belowRowThetaBounds.maxLeftTheta < currentRowThetaBounds.maxLeftTheta && belowRowThetaBounds.minRightTheta <= currentRowThetaBounds.minRightTheta) {
+			segment.stopTheta = belowRowThetaBounds.maxLeftTheta;
+		};
+
+		// If a chair below completely covers chair, then no need to draw a bottom border
+		if (belowRowThetaBounds.maxLeftTheta >= currentRowThetaBounds.maxLeftTheta && belowRowThetaBounds.minRightTheta <= currentRowThetaBounds.minRightTheta) {
+			segment.startTheta = null; // Reset startX to chairC's left edge
+			segment.stopTheta = null; //
+			return;
+		}
+
+		// Check if chairs below interrupt a segment, then draw bottom border on either side
+		if (belowRowThetaBounds.maxLeftTheta < currentRowThetaBounds.maxLeftTheta && belowRowThetaBounds.minRightTheta > currentRowThetaBounds.minRightTheta) {
+			// Split the segment into two pieces around bottom chair
+			const newSegment = { startTheta: belowRowThetaBounds.minRightTheta, stopTheta: currentRowThetaBounds.minRightTheta };
+			segment.stopTheta = belowRowThetaBounds.maxLeftTheta; // Adjust the original segment's stopX
+			segments.push(newSegment); // Insert the new segment
+		}
+	}
+
+
+	
+
+	//If none of these, then there is no bottom border,so draw a full bottom border.
+
+	segments.push(segment)
+
+	console.log('drawSectionRowBottom: ', 'segments = ', segments);
+
+
+	segments.forEach(segment => {
+		
+		$('canvas').drawArc({
+			strokeStyle: '#A0A',
+			strokeWidth: 10,
+			x: centerX, y: centerY,
+			radius: chair.bottomBoundRadius, //chair.r - 40 * seatScale,
+			// start and end angles in degrees
+			start: -segment.startTheta , end: -segment.stopTheta
+		});
+	})
+};
+
+
+function drawSectionRowTopAndBottom(row, section) {
+	//Pull a sample chair to find other variables we need.
+	const chair = row[0];
+	// Adjust the row numbers to match the bottom-to-top drawing order
+	const aboveRowNumber = +chair.row + 1;
+	const belowRowNumber = +chair.row - 1;
+	
+	// Check if these rows are empty or do not exist
+	const aboveRowIsEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber].length === 0;
+	const belowRowIsEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber].length === 0;
+	
+
+	const aboveRow = section.rows[+chair.row + 1] || [];
+	const currentRow = section.rows[+chair.row];
+	const belowRow = section.rows[+chair.row - 1] || [];
+
+	const aboveRowThetaBounds = findRowThetaBounds(aboveRow);
+	const currentRowThetaBounds = findRowThetaBounds(currentRow);
+	const belowRowThetaBounds = findRowThetaBounds(belowRow);
+
+	const segments = [];
+	
+	const segment = {
+		startTheta: currentRowThetaBounds.maxLeftTheta,
+		stopTheta: currentRowThetaBounds.minRightTheta,
+		radius: chair.bottomBoundRadius
+	}
+
+	//If the row is the top row of the section (meaning that there is no row above it), draw a line across the whole thing.
+	if (aboveRowIsEmpty) {
+		const newSegment = Object.create(segment)
+		newSegment.radius = chair.topBoundRadius
+		segments.push(newSegment); // Insert the new segment
+	}
+
+	console.log('drawSectionRowTopAndBottom: ', 'belowRowThetaBounds = ', belowRowThetaBounds);
+	console.log('drawSectionRowTopAndBottom: ', 'currentRowThetaBounds = ', currentRowThetaBounds);
+	console.log('drawSectionRowTopAndBottom: ', 'b.lt = ', belowRowThetaBounds.maxLeftTheta);
+	console.log('drawSectionRowTopAndBottom: ', 'c.rt = ', currentRowThetaBounds.minRightTheta);
+	console.log('drawSectionRowTopAndBottom: ', 'b.lt > c.rt = ', belowRowThetaBounds.maxLeftTheta > currentRowThetaBounds.minRightTheta);
+
+	if (!belowRowIsEmpty) {
+		if (belowRowThetaBounds.maxLeftTheta > currentRowThetaBounds.minRightTheta) {
+			console.log('drawSectionRowTopAndBottom: ', 'math.max(b.lt, c.lt) = ', Math.max(belowRowThetaBounds.maxLeftTheta, currentRowThetaBounds.maxLeftTheta));
+			const newSegment = {
+				radius: chair.bottomBoundRadius,
+				startTheta: Math.max(belowRowThetaBounds.maxLeftTheta, currentRowThetaBounds.maxLeftTheta),
+				stopTheta: Math.min(belowRowThetaBounds.maxLeftTheta, currentRowThetaBounds.maxLeftTheta)
+			}
+			segments.push(newSegment); // Insert the new segment
+		}
+
+		if (belowRowThetaBounds.minRightTheta < currentRowThetaBounds.maxLeftTheta) {
+			const newSegment = {
+				radius: chair.bottomBoundRadius,
+				startTheta: Math.max(belowRowThetaBounds.minRightTheta, currentRowThetaBounds.minRightTheta),
+				stopTheta: Math.min(belowRowThetaBounds.minRightTheta, currentRowThetaBounds.minRightTheta)
+			}
+			segments.push(newSegment); // Insert the new segment
+		}
+	}
+
+	if (belowRowIsEmpty) {
+		segments.push(segment); // Insert the whole bottom segment
+	}
+
+	console.log('drawSectionRowTopAndBottom: ', 'segments = ', segments);
+
+
+	segments.forEach(segment => {
+		
+		$('canvas').drawArc({
+			strokeStyle: '#A0A',
+			strokeWidth: 10,
+			x: centerX, y: centerY,
+			radius: segment.radius, //chair.r - 40 * seatScale,
+			// start and end angles in degrees
+			start: -segment.startTheta , end: -segment.stopTheta
+		});
+	})
+}
+
+
+
+function checkBottomEdge(chair, section) {
+	//check the section.rows[chair.row - 1] for any chairBelow whose chairBelow.leftThetaBound and rightThetaBound might fall between the chair.leftThetaBound and chair.rightThetaBounds.
+	// if there is overlap, drawSectionChairBorderBottom()
+};
+function checkTopEdge(chair, section) {};
+
+
+
+
+//DO THIS BY ROW INSTEAD OF BY CHAIR!!!!!!!!!!!
+// SHOULD BE calculateBorderForSectionRow(row, section)
+function calculateBorderForChair(chair, section) {
+	// Adjust the row numbers to match the bottom-to-top drawing order
+	const aboveRowNumber = +chair.row + 1;
+	const belowRowNumber = +chair.row - 1;
+	
+	// Check if these rows are empty or do not exist
+	const isAboveRowEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber].length === 0;
+	const isBelowRowEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber].length === 0;
+	
+
+    const aboveRow = section.rows[+chair.row + 1] || [];
+	const currentRow = section.rows[chair.row];
+    const belowRow = section.rows[+chair.row - 1] || [];
+
+	const aboveRowThetaBounds = findRowThetaBounds(aboveRow);
+	const currentRowThetaBounds = findRowThetaBounds(currentRow);
+	const belowRowThetaBounds = findRowThetaBounds(belowRow);
+
+	const segements = [];
+	
+	const segment = {
+		startTheta: chair.leftBoundTheta,
+		stopTheta: chair.rightBoundTheta
+	}
+
+	
+
+	// If connected chairs below overlap the left side of chair, then draw bottom border on the right side
+	if (belowRowThetaBounds.maxLeftTheta <= chair.leftBoundTheta && belowRowThetaBounds.minRightTheta > chair.leftBoundTheta && belowRowThetaBounds.minRightTheta < chair.rightBoundTheta) {
+		segment.startTheta = belowRowThetaBounds.minRightTheta;
+	};
+
+	// If connected chairs below overlap the right side of chair, then draw bottom border on the left side
+	if (belowRowThetaBounds.maxLeftTheta < chair.rightBoundTheta && belowRowThetaBounds.maxLeftTheta < chair.leftBoundTheta && belowRowThetaBounds.minRightTheta >= chair.rightBoundTheta) {
+		segment.stopTheta = belowRowThetaBounds.maxLeftTheta;
+	};
+
+	// If a chair below completely covers chair, then no need to draw a bottom border
+	if (belowRowThetaBounds.maxLeftTheta <= chair.leftBoundTheta && belowRowThetaBounds.minRightTheta >= chair.rightBoundTheta) {
+		segment.startTheta = null; // Reset startX to chairC's left edge
+		segment.stopTheta = null; //
+		segment = null 
+	}
+
+	// Check if chairs below interrupt a segment, then draw bottom border on either side
+	if (belowRowThetaBounds.maxLeftTheta > chair.leftBoundTheta && belowRowThetaBounds.minRightTheta < chair.rightBoundTheta) {
+		// Split the segment into two pieces around bottom chair
+		const newSegment = { startTheta: belowRowThetaBounds.minRightTheta, stopTheta: chair.rightBoundTheta };
+		segment.stopTheta = belowRowThetaBounds.maxLeftTheta; // Adjust the original segment's stopX
+		segments.push(newSegment); // Insert the new segment
+	}
+
+
+	
+
+	//If none of these, then there is no bottom border,so draw a full bottom border.
+
+	segments.push(segment)
+
+
+
+	// Adjust the start and stop x-values based on the chairs below
+	// this version does NOT support drawing of border lines on the inside of the section border
+	belowRow.forEach(chairB => {
+	  	// If a chair below overlaps the left side of chair C
+	  	if (chairB.x < chairC.x && chairB.x + chairB.width > chairC.x) {
+			startX = Math.max(startX, chairB.x + chairB.width);
+	  	}
+	  	// If a chair below overlaps the right side of chair C
+	  	if (chairB.x < chairC.x + chairC.width && chairB.x + chairB.width >= chairC.x + chairC.width) {
+			stopX = Math.min(stopX, chairB.x);
+	  	}
+	  	// If a chair below completely covers chair C
+	  	if (chairB.x <= chairC.x && chairB.x + chairB.width >= chairC.x + chairC.width) {
+			startX = chairC.x; // Reset startX to chairC's left edge
+			stopX = startX; // Set stopX equal to startX, effectively drawing no line
+	  	}
+	});
+  
+	return { startX, stopX };
+}
+
 
 
 function drawSectionXY(chair) {
@@ -891,7 +1213,10 @@ function drawSectionXY(chair) {
 	console.log(chair.t)
 	let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
 	let sectionBorderWidthRads = Math.asin(sectionBorderWidthOffset / chair.r) * 2
-	let sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads;
+	let sectionOffsetRads = chair.angleStep / 2 - sectionBorderWidthRads; //rads for if you want side borders to be drawn INSIDE the section bounds
+	const sideBorderVectorLength = chair.topBoundRadius - chair.bottomBoundRadius + (4 * sectionBorderWidthOffset)
+	const leftBorderRads = -chair.leftBoundTheta
+	const rightBorderRads = -chair.rightBoundTheta
 	// Draw a 90-degree arc
 	$('canvas').drawArc({
 		strokeStyle: '#000',
@@ -899,7 +1224,7 @@ function drawSectionXY(chair) {
 		x: centerX, y: centerY,
 		radius: chair.topBoundRadius, // chair.r + 40 * seatScale,
 		// start and end angles in degrees
-		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
+		start: leftBorderRads , end: rightBorderRads
 	});
 	$('canvas').drawArc({
 		strokeStyle: '#000',
@@ -907,29 +1232,41 @@ function drawSectionXY(chair) {
 		x: centerX, y: centerY,
 		radius: chair.bottomBoundRadius, //chair.r - 40 * seatScale,
 		// start and end angles in degrees
-		start: -t - sectionOffsetRads , end: -t + sectionOffsetRads
+		start: leftBorderRads , end: rightBorderRads
 	});
 	let borderLeftTheta = t + sectionOffsetRads;
 	let borderRightTheta = t - sectionOffsetRads;
 	var borderLeftX = centerX - Math.sin(chair.t + sectionOffsetRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
 	var borderLeftY = centerY - Math.cos(chair.t + sectionOffsetRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
-	var borderRightX = centerX - Math.sin(chair.t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
-	var borderRightY = centerY - Math.cos(chair.t - sectionOffsetRads) * (chair.r - (2*sectionBorderWidthOffset) - 40 * seatScale);
+	var borderRightX = centerX - Math.sin(chair.t - sectionOffsetRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
+	var borderRightY = centerY - Math.cos(chair.t - sectionOffsetRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset));
 
+
+	/*// use this if you want the section edge to be drawn right down the middle between two chairs.
+	$('canvas').drawVector({
+		strokeStyle: '#0A0',
+		strokeWidth: 12,
+		x: centerX - Math.sin(-leftBorderRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset)), y: centerY - Math.cos(-leftBorderRads) * (chair.bottomBoundRadius - (2* sectionBorderWidthOffset)),
+		// start and end angles in degrees
+		a1: leftBorderRads, l1: sideBorderVectorLength //(chair.radiusStep + (2 * sectionBorderWidthOffset)),
+	});*/
+
+	// use this if you want the section edge to be drawn on the inside edge of the border between 2 chairs.
 	$('canvas').drawVector({
 		strokeStyle: '#000',
 		strokeWidth: 5,
 		x: borderLeftX, y: borderLeftY,
 		// start and end angles in degrees
-		a1: -t - sectionOffsetRads, l1: (chair.radiusStep + (2 * sectionBorderWidthOffset)),
+		a1: leftBorderRads, l1: sideBorderVectorLength //(chair.radiusStep + (2 * sectionBorderWidthOffset)),
 	});
 	$('canvas').drawVector({
 		strokeStyle: '#000',
 		strokeWidth: 5,
 		x: borderRightX, y: borderRightY,
 		// start and end angles in degrees
-		a1: -t + sectionOffsetRads, l1: (80 + (2 * sectionBorderWidthOffset)) * seatScale,
+		a1: rightBorderRads, l1: sideBorderVectorLength,
 	});
+
 }
 
 function drawSectionBorderLeft(chair) {
