@@ -1,4 +1,5 @@
 import { Section } from './sections.js'; // Import Chair class if needed inside Section class
+import './general.js';
 
 var canvasScale = 2;
 var spectrumInitialized = false;
@@ -7,7 +8,7 @@ var defaultPalette;
 var userPalette = [];
 var podium = {};
 
-var ensemble;
+const ensemble = {};
 var jsonVersion = 6;
 
 var centerX = 525*canvasScale
@@ -32,9 +33,7 @@ var editingLabelRow;
 // Global variables to track the current mode and the current section being edited
 var currentCanvasClickMode = 'normal'; // Other possible value: 'addChairToSection'
 var currentSection = null; // Assuming this will hold some identifier for the current section
-var sections;
-const sectionsClassTest = {};
-var selectedChairs = [];
+const sections = {};
 
 var vcLoc = [];
 
@@ -178,11 +177,6 @@ $(function() {
 		// Delete the section row
 		$(this).closest("tr").remove();
 	});
-
-
-
-
-
 
 
 	if(!window.FileReader) {
@@ -946,6 +940,7 @@ function drawSectionRowSides(row, section) {
 function drawSectionRowTopAndBottom(row, section) {
 	//Pull a sample chair to find other variables we need.
 	const chair = row[0];
+	chair.enforceType(Section.prototype)
 	// Adjust the row numbers to match the bottom-to-top drawing order
 	const aboveRowNumber = +chair.row + 1;
 	const belowRowNumber = +chair.row - 1;
@@ -1083,7 +1078,7 @@ function clickChart(e) {
 					//chair.section = !chair.section ? currentSection : null;
 
 					//!!! maybe this needs to be drawSections()...
-					const section = sectionsClassTest[currentSection]; //add this after you fix logic in addChairToSection to support Section objects
+					const section = sections[currentSection]; //add this after you fix logic in addChairToSection to support Section objects
 
 					addChairToSection(chair, section);
 				} else {
@@ -1259,11 +1254,16 @@ function reset() {
 	$('input:checkbox').removeAttr('checked');
 	$('#chknumbers').attr('checked', 'checked');
 	checkStands();
+	ensemble = {
+		chairs: [],
+		stands: [],
+		sections: {},
+	}
 	chairs = [];
 	stands = [];
 	standCoordinates = [];
 	rows = [];
-	sections = {};
+	resetObject(sections)
 	labels = [];
 	customRowFontSizes = [];
 	customScale = 1;
@@ -1335,11 +1335,9 @@ function addSection() {
       //alert("Please enter a section name.");
       return;
     }
-	if (sectionsClassTest[sectionName]) {alert("Section with this name already exists."); return;}; //switching over to section class logic...
-	if (sections[sectionName]) {alert("Section with this name already exists."); return;};
 
-	sectionsClassTest[sectionName] = new Section(sectionName);
-	sections[sectionName] = []
+	if (sections[sectionName]) {alert("Section with this name already exists."); return;};
+	sections[sectionName] = new Section(sectionName);
     var actionButtons = '<button class="edit-btn">Edit</button> ' +
                         '<button class="add-chairs-btn">Add Chairs</button> ' +
                         '<button class="delete-btn">Delete</button>';
@@ -1351,16 +1349,13 @@ function addSection() {
     );
 	//if (!sections[sectionName]) {sections[sectionName] = []}; 
 	console.log('addSections sections', sections)
-	console.log('addSections sectionsClassTest', sectionsClassTest)
     $("#section-name-input").val(""); // Clear input box after adding
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function addChairToSection(chair, section) {
-	//const sectionObjFromClass = sectionsClassTest[sectionName];
-	
+function addChairToSection(chair, section) {	
 	// 1) check if chair already has a section
 	// 2) check if chair exists in current section
 	// 3) check adjacency
@@ -2141,4 +2136,15 @@ $.fn.drawChairText = function drawChairText(args) {
 		fontSize: args.fontSize,
 		fontFamily: args.fontFamily
 	});
+}
+
+
+
+function resetObject(object) {
+    // Loop through all properties of the object and delete them
+    for (const prop in object) {
+        if (object.hasOwnProperty(prop)) {
+        delete object[prop];
+        }
+    }
 }
