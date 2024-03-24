@@ -891,9 +891,9 @@ function drawSectionByRow(row, section) {
 
 function drawSectionRowSides(row, section) {
 	//We don't know the length of the section edges, so pull a sample chair to find other variables we need.
-	const chair = row[0];
+	const chair = row.chairs[0];
 
-	const thetaBounds = findRowThetaBounds(row);
+	const thetaBounds = findRowThetaBounds(row.chairs);
 
 
 	let sectionBorderWidthOffset = 1.25; //for a 5px stroke width
@@ -939,23 +939,23 @@ function drawSectionRowSides(row, section) {
 
 function drawSectionRowTopAndBottom(row, section) {
 	//Pull a sample chair to find other variables we need.
-	const chair = row[0];
+	const chair = row.chairs[0];
 	// Adjust the row numbers to match the bottom-to-top drawing order
 	const aboveRowNumber = +chair.row + 1;
 	const belowRowNumber = +chair.row - 1;
 	
 	// Check if these rows are empty or do not exist
-	const aboveRowIsEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber].length === 0;
-	const belowRowIsEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber].length === 0;
+	const aboveRowIsEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber]?.chairs.length === 0;
+	const belowRowIsEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber]?.chairs.length === 0;
 	
 
-	const aboveRow = section.rows[+chair.row + 1] || [];
+	const aboveRow = section.rows[+chair.row + 1] || {};
 	const currentRow = section.rows[+chair.row];
-	const belowRow = section.rows[+chair.row - 1] || [];
+	const belowRow = section.rows[+chair.row - 1] || {};
 
-	const aboveRowThetaBounds = findRowThetaBounds(aboveRow);
-	const currentRowThetaBounds = findRowThetaBounds(currentRow);
-	const belowRowThetaBounds = findRowThetaBounds(belowRow);
+	const aboveRowThetaBounds = findRowThetaBounds(aboveRow?.chairs || []);
+	const currentRowThetaBounds = findRowThetaBounds(currentRow.chairs);
+	const belowRowThetaBounds = findRowThetaBounds(belowRow?.chairs || []);
 
 	const segments = [];
 	
@@ -1448,7 +1448,7 @@ function isChairUnassignedOrInSection(chair, section) {
 function doesChairExistInSection(chair, section) {
 	for (let rowKey in section.rows) {
 		let row = section.rows[rowKey]; // Access the array of chairs for this row
-		for (let existingChair of row) { // Use of 'for...of' to iterate over array elements
+		for (let existingChair of row.chairs) { // Use of 'for...of' to iterate over array elements
 			if (existingChair === chair) {
 				return true; // The exact chair object was found
 			}
@@ -1527,8 +1527,8 @@ function isAdjacentSectionRowEmpty(chair, section) {
 	const belowRowNumber = +chair.row - 1;
   
 	// Check if these rows are empty or do not exist
-	const isAboveRowEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber].length === 0;
-	const isBelowRowEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber].length === 0;
+	const isAboveRowEmpty = !section.rows[aboveRowNumber] || section.rows[aboveRowNumber]?.chairs.length === 0;
+	const isBelowRowEmpty = !section.rows[belowRowNumber] || section.rows[belowRowNumber]?.chairs.length === 0;
   
 	console.log('isAdjacentSectionRowEmpty: ', 'isAboveRowEmpty = ', isAboveRowEmpty, 'isBelowRowEmpty = ', isBelowRowEmpty);
   
@@ -1557,7 +1557,7 @@ function isAdjacentToOnlyOneChair(chair, section) {
     console.log('isAdjacentToOnlyOneChair: ', 'chair: ', chair);
 
     // Get the array of chairs in the specified row; if the row doesn't exist, treat it as an empty array
-    const chairsInRow = section.rows[chair.row] || [];
+    const chairsInRow = section.rows[chair.row]?.chairs || [];
 
     // Count the number of chairs immediately adjacent to the given chair in the same row
     const adjacentChairCount = chairsInRow.filter(adjacentChair => 
@@ -1589,7 +1589,7 @@ function isOnlyChairAssignedToSectionRow(chair, section) {
   console.log('isOnlyChairAssignedToSectionRow: ', 'chair: ', chair);
 
   // Get the array of chairs in the specified row; if the row doesn't exist, treat it as an empty array
-  const chairsInRow = section.rows[chair.row] || [];
+  const chairsInRow = section.rows[chair.row]?.chairs || [];
 
   console.log('isOnlyChairAssignedToSectionRow: ', 'chairsInRow: ', chairsInRow);
 
@@ -1620,7 +1620,7 @@ function isLastRemainingChairAssignedToRow(chair, section) {
 	console.log('isLastRemainingChairAssignedToRow: ', 'section: ', section);
 	console.log('isLastRemainingChairAssignedToRow: ', 'chair: ', chair);
   
-	const chairsInSameRow = section.rows[chair.row] || [];
+	const chairsInSameRow = section.rows[chair.row]?.chairs || [];
   
 	console.log('chairsInSameRow: ', chairsInSameRow);
   
@@ -1659,7 +1659,7 @@ function isInAdjacentRow(chair, section) {
 	console.log('isInAdjacentRow: ', 'section.rows[aboveRowNumber] = ', section.rows[aboveRowNumber])
 	console.log('isInAdjacentRow: ', 'section.rows[belowRowNumber] = ', section.rows[belowRowNumber])
     // Combine chairs from both adjacent rows into a single array for checking
-    const chairsInAdjacentRows = (section.rows[aboveRowNumber] || []).concat(section.rows[belowRowNumber] || []);
+    const chairsInAdjacentRows = (section.rows[aboveRowNumber]?.chairs || []).concat(section.rows[belowRowNumber]?.chairs || []);
 
 	console.log('isInAdjacentRow: ', 'chairsInAdjacentRows = ', chairsInAdjacentRows)
     // Check if any chair in the adjacent rows is spatially adjacent to the given chair
@@ -1713,12 +1713,12 @@ function isLastChairConnectingTwoRows(chair, section) {
 function disruptsVerticalContinuityOnRemoval(chair, section) {
     // Adjacent rows to consider
     const aboveRow = section.rows[+chair.row + 1] || [];
-	const currentRow = section.rows[chair.row];
+	const currentRow = section.rows[+chair.row];
     const belowRow = section.rows[+chair.row - 1] || [];
 
-	const aboveRowThetaBounds = findRowThetaBounds(aboveRow);
-	const currentRowThetaBounds = findRowThetaBounds(currentRow);
-	const belowRowThetaBounds = findRowThetaBounds(belowRow);
+	const aboveRowThetaBounds = findRowThetaBounds(aboveRow?.chairs || []);
+	const currentRowThetaBounds = findRowThetaBounds(currentRow.chairs);
+	const belowRowThetaBounds = findRowThetaBounds(belowRow?.chairs || []);
 
 	console.log('checkVerticalConnectivity: ', 'aboveRowThetaBounds = ', aboveRowThetaBounds)
 
@@ -1739,7 +1739,7 @@ function disruptsVerticalContinuityOnRemoval(chair, section) {
     const isConnectedBelow = hasVerticalConnection(currentRowThetaBounds, belowRowThetaBounds);
 
     // Remove the chair temporarily to see if vertical continuity is broken
-    const tempRow = currentRow.filter(c => c !== chair);
+    const tempRow = currentRow.chairs.filter(c => c !== chair);
 	const tempRowThetaBounds = findRowThetaBounds(tempRow) || {maxLeftTheta: 0, minRightTheta: 0}
 
     const isConnectedAboveAfterRemoval = hasVerticalConnection(tempRowThetaBounds, aboveRowThetaBounds);
