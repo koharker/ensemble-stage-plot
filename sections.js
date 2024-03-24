@@ -1,6 +1,6 @@
 //import { Chair } from './chair.js'; // Import Chair class if needed inside Section class
 
-export class SectionOLD {
+export class Section {
     constructor(name) {
         this.name = name;
         this.rows = {}; // Dynamically holds row data
@@ -44,11 +44,11 @@ export class SectionOLD {
     }
 }
 
+/*
 
 
 
-
-export class Section {
+export class SectionNew {
     constructor(name) {
         this.name = name;
         this.rows = {}; // Initialize with an empty object for rows
@@ -115,3 +115,4 @@ export class Section {
         return Object.values(this.rows).reduce((total, { chairs }) => total + chairs.length, 0);
     }
 }
+*/

@@ -1,5 +1,5 @@
-import { Section } from './sections.js'; // Import Chair class if needed inside Section class
 import './general.js';
+import { Section } from './sections.js'; // Import Chair class if needed inside Section class
 
 var canvasScale = 2;
 var spectrumInitialized = false;
@@ -8,7 +8,7 @@ var defaultPalette;
 var userPalette = [];
 var podium = {};
 
-const ensemble = {};
+var ensemble;
 var jsonVersion = 6;
 
 var centerX = 525*canvasScale
@@ -940,7 +940,6 @@ function drawSectionRowSides(row, section) {
 function drawSectionRowTopAndBottom(row, section) {
 	//Pull a sample chair to find other variables we need.
 	const chair = row[0];
-	chair.enforceType(Section.prototype)
 	// Adjust the row numbers to match the bottom-to-top drawing order
 	const aboveRowNumber = +chair.row + 1;
 	const belowRowNumber = +chair.row - 1;
