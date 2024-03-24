@@ -1,6 +1,6 @@
 //import { Chair } from './chair.js'; // Import Chair class if needed inside Section class
 
-export class Section {
+export class SectionOLD {
     constructor(name) {
         this.name = name;
         this.rows = {}; // Dynamically holds row data
@@ -41,5 +41,77 @@ export class Section {
     // Method to return the total number of chairs in the section
     getTotalChairs() {
         return Object.values(this.rows).reduce((total, row) => total + row.length, 0);
+    }
+}
+
+
+
+
+
+export class Section {
+    constructor(name) {
+        this.name = name;
+        this.rows = {}; // Initialize with an empty object for rows
+    }
+
+    addChair(chair) {
+        // Destructure chair properties if needed, e.g., const { row, leftBoundTheta, rightBoundTheta } = chair;
+        const { row } = chair;
+
+        if (!this.rows[row]) {
+            this.rows[row] = {
+                chairs: [],
+                leftTheta: null,
+                rightTheta: null,
+                id: row, // Assuming row ID is the same as row number for simplicity
+            };
+        }
+
+        this.rows[row].chairs.push(chair);
+
+        // Update the leftTheta and rightTheta for the row after adding a chair
+        this.#updateThetaBounds(row);
+    }
+
+    removeChair(chair) {
+        const { row } = chair;
+        if (this.rows[row]) {
+            const index = this.rows[row].chairs.findIndex(existingChair => existingChair === chair);
+            if (index !== -1) {
+                this.rows[row].chairs.splice(index, 1);
+                
+                if (this.rows[row].chairs.length === 0) {
+                    delete this.rows[row];
+                } else {
+                    this.#updateThetaBounds(row);
+                }
+            }
+        }
+    }
+
+    #updateThetaBounds(row) {
+        // Directly update the row's leftTheta and rightTheta properties
+        const { maxLeftTheta, minRightTheta } = this.rows[row].chairs.reduce(({ maxLeftTheta, minRightTheta }, { leftBoundTheta, rightBoundTheta }) => ({
+            maxLeftTheta: Math.max(maxLeftTheta, leftBoundTheta),
+            minRightTheta: Math.min(minRightTheta, rightBoundTheta),
+        }), { maxLeftTheta: -Infinity, minRightTheta: Infinity });
+
+        this.rows[row].leftTheta = maxLeftTheta;
+        this.rows[row].rightTheta = minRightTheta;
+    }
+
+    #findRowThetaBounds(chairsInRow) {
+        // This method can be removed if not used elsewhere since logic has been moved to #updateThetaBounds
+        return {}; // Placeholder if necessary
+    }
+
+    isEmpty() {
+        // Use Object.values and every for concise evaluation
+        return Object.values(this.rows).every(({ chairs }) => chairs.length === 0);
+    }
+
+    getTotalChairs() {
+        // Sum up the number of chairs across all rows in a concise manner
+        return Object.values(this.rows).reduce((total, { chairs }) => total + chairs.length, 0);
     }
 }

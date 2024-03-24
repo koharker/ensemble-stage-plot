@@ -1256,8 +1256,15 @@ function reset() {
 	checkStands();
 	ensemble = {
 		chairs: [],
+		rows: [],
 		stands: [],
+		labels: [],
+		customRowFontSizes: [],
 		sections: {},
+		settings: {
+			letterRows: false,
+			restartNumbering: false,
+		}
 	}
 	chairs = [];
 	stands = [];
